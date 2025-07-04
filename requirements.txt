@@ -1,9 +1,15 @@
 fastapi[standard]==0.113.0
 pydantic==2.8.0
 sqlalchemy
-mysql-connector-python
+psycopg2-binary
 alembic
 python-dotenv
 uvicorn
 loguru
-pytest 
+pytest
+pandas
+numpy
+playwright 
+pykrx
+TA-Lib
+supabase-py
