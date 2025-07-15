@@ -1,8 +1,6 @@
 from sqlalchemy import Column, BigInteger, String, Numeric, Integer, Text, UniqueConstraint
-from sqlalchemy.ext.declarative import declarative_base
 from app.db.models.timestamp_mixin import TimestampMixin
-
-Base = declarative_base()
+from app.db.database import Base
 
 class ThemeInfo(TimestampMixin, Base):
     __tablename__ = "tb_theme_info"

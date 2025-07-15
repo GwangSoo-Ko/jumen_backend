@@ -1,19 +1,16 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import Home from './pages/Home';
-import ThemeList from './pages/ThemeList';
-import ThemeDetail from './pages/ThemeDetail';
-import SiteLayout from './components/SiteLayout';
+import ThemeList from './dashboard/ThemeList';
+import ThemeDetail from './dashboard/ThemeDetail';
+import Dashboard from './dashboard/Dashboard';
 
 function App() {
   return (
     <BrowserRouter>
-      <SiteLayout>
         <Routes>
-          <Route path="/" element={<Home />} />
           <Route path="/themes" element={<ThemeList />} />
           <Route path="/themes/:id" element={<ThemeDetail />} />
+          <Route path="/dashboard" element={<Dashboard />} />
         </Routes>
-      </SiteLayout>
     </BrowserRouter>
   );
 }

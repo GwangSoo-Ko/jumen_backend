@@ -1,21 +1,11 @@
 import React from 'react';
 import Button from '@mui/material/Button';
+import Tooltip from '@mui/material/Tooltip';
 
-interface ThemeCardProps {
-  name: string;
-  description: string;
-  change_rate: number;
-  avg_change_rate_3days: number;
-  up_ticker_count: number;
-  neutral_ticker_count: number;
-  down_ticker_count: number;
-  companyCount: number;
-  onClick: () => void;
-}
 
-const getRateColor = (rate: number) => (rate > 0 ? '#d32f2f' : rate < 0 ? '#1976d2' : '#333');
+const getRateColor = (rate) => (rate > 0 ? '#d32f2f' : rate < 0 ? '#1976d2' : '#333');
 
-const ThemeCard: React.FC<ThemeCardProps> = ({ name, description, change_rate, avg_change_rate_3days, up_ticker_count, neutral_ticker_count, down_ticker_count, companyCount, onClick }) => (
+const ThemeCard = ({ name, change_rate, avg_change_rate_3days, up_ticker_count, neutral_ticker_count, down_ticker_count, companyCount, onClick }) => (
   <div
     className="theme-card"
     onClick={onClick}
@@ -43,8 +33,22 @@ const ThemeCard: React.FC<ThemeCardProps> = ({ name, description, change_rate, a
     }}
   >
     <div>   
-      <h3 style={{ margin: '0 0 8px 0', color: '#1976d2', fontWeight: 700 }}>{name}</h3>
-      <p style={{ margin: '0 0 12px 0', color: '#555', fontSize: 15 }}>{description}</p>
+    <Tooltip title={name} placement="top-start">
+  <h3
+    style={{
+      margin: '0 0 8px 0',
+      color: '#1976d2',
+      fontWeight: 700,
+      fontSize: 20,
+      whiteSpace: 'nowrap',
+      overflow: 'hidden',
+      textOverflow: 'ellipsis',
+    }}
+  >
+    {name}
+  </h3>
+</Tooltip>
+      {/* <h3 style={{ margin: '0 0 8px 0', color: '#1976d2', fontWeight: 700 }}>{name}</h3> */}
       <p style={{ fontWeight: 500, margin: 0, color: '#333' }}>
         등락률: <span style={{ color: getRateColor(change_rate) }}>
           {change_rate > 0 ? '+' : ''}{(change_rate * 100).toFixed(2)}%
@@ -55,10 +59,10 @@ const ThemeCard: React.FC<ThemeCardProps> = ({ name, description, change_rate, a
           {avg_change_rate_3days > 0 ? '+' : ''}{(avg_change_rate_3days * 100).toFixed(2)}%
         </span>
       </p>
-      <p style={{ fontWeight: 500, margin: 0, color: '#333' }}>상승 종목 수: {up_ticker_count}</p>
-      <p style={{ fontWeight: 500, margin: 0, color: '#333' }}>중립 종목 수: {neutral_ticker_count}</p>
-      <p style={{ fontWeight: 500, margin: 0, color: '#333' }}>하락 종목 수: {down_ticker_count}</p>
-      <p style={{ fontWeight: 500, margin: 0, color: '#333' }}>전체 종목 수: {companyCount}</p>
+      <p style={{ fontWeight: 500, margin: 0, color: '#333' }}>상승 종목 수: <span style={{ color: '#d32f2f' }}>{up_ticker_count}</span></p>
+      <p style={{ fontWeight: 500, margin: 0, color: '#333' }}>중립 종목 수: <span style={{ color: '#333' }}>{neutral_ticker_count}</span></p>
+      <p style={{ fontWeight: 500, margin: 0, color: '#333' }}>하락 종목 수: <span style={{ color: '#1976d2' }}>{down_ticker_count}</span></p>
+      <p style={{ fontWeight: 500, margin: 0, color: '#333' }}>전체 종목 수: <span style={{ color: '#333' }}>{companyCount}</span></p>
     </div>
     <Button
       style={{

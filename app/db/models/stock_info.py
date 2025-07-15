@@ -1,8 +1,6 @@
 from sqlalchemy import Column, BigInteger, String, Date
-from sqlalchemy.ext.declarative import declarative_base
 from app.db.models.timestamp_mixin import TimestampMixin
-
-Base = declarative_base()
+from app.db.database import Base
 
 class StockInfo(TimestampMixin, Base):
     __tablename__ = "tb_stock_info"
@@ -16,4 +14,4 @@ class StockInfo(TimestampMixin, Base):
     size = Column(String)
     company_class = Column(String)
     listed_count = Column(BigInteger)
-    warning_status = Column(String) 
+    warning_status = Column(String)

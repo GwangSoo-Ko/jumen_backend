@@ -1,7 +1,5 @@
 from sqlalchemy import Column, BigInteger, Numeric, Date, Text, ForeignKey
-from sqlalchemy.orm import declarative_base
-
-Base = declarative_base()
+from app.db.database import Base
 
 class StockOhlcv(Base):
     __tablename__ = 'tb_stock_ohlcv'

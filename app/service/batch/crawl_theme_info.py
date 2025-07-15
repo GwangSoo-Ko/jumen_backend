@@ -236,6 +236,7 @@ class ThemeInfoService:
             for _, row in stock_df.iterrows():
                 theme_code = row['테마코드']
                 ticker = row['티커']
+                
                 stock_id = stock_map.get(ticker)
                 theme_id = theme_map.get(theme_code)
                 if stock_id and theme_id:

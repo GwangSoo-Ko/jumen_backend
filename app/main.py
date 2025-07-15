@@ -1,6 +1,10 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.api import theme_info
+from app.api import index_info
+from app.db.init_db import init_db
+
+init_db()
 
 app = FastAPI()
 
@@ -14,6 +18,7 @@ app.add_middleware(
 )
 
 app.include_router(theme_info.router)
+app.include_router(index_info.router)
 
 @app.get("/")
 def read_root():

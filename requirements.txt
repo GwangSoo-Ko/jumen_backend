@@ -12,4 +12,5 @@ numpy
 playwright 
 pykrx
 TA-Lib
-supabase-py
+supabase
+finance-datareader

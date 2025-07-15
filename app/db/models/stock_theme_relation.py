@@ -1,8 +1,6 @@
 from sqlalchemy import Column, BigInteger, ForeignKey, Numeric, Text
-from sqlalchemy.orm import declarative_base
 from app.db.models.timestamp_mixin import TimestampMixin
-
-Base = declarative_base()
+from app.db.database import Base 
 
 class StockThemeRelation(TimestampMixin, Base):
     __tablename__ = 'tb_relation_stock_theme'

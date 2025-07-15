@@ -15,7 +15,7 @@ def get_valid_token(db: Session, account_no: str):
         KiwoomApiInfo.token_expire_date > now
     ).first()
     if row:
-        return row.valid_token
+        return row.api_url, row.valid_token
     else:
         return None
 
@@ -40,9 +40,9 @@ def get_kiwoom_api_url_and_valid_token():
         print(".env 파일에 ACCOUNT_NO가 정의되어 있어야 합니다.")
         return
     db = SessionLocal()
-    valid_token = get_valid_token(db, account_no)
+    api_url, valid_token = get_valid_token(db, account_no)
     if valid_token:
-        print(f"유효한 토큰 있음: {valid_token}")
+        print(f"유효한 토큰 있음: {api_url}, {valid_token}")
     else:
         app_key, secret_key, api_url = get_kiwoom_api_keys(db, account_no)
         if api_url is None or app_key is None or secret_key is None:
