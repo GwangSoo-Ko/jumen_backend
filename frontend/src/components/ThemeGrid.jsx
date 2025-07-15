@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Box, Grid, Typography } from '@mui/material';
-import ThemeCard from '../../components/ThemeCard';
+import ThemeCard from './ThemeCard';
 import { useNavigate } from 'react-router-dom';
 import Copyright from '../internals/components/Copyright';
 
@@ -19,7 +19,7 @@ export default function ThemeGrid() {
       <h1 style={{ margin: '0 0 8px 0' }}>테마(섹터) 목록</h1>
       <Grid container spacing={3} columns={12}>
         {themes.map(theme => (
-          <Grid item xs={12} sm={6} md={4} lg={3} key={theme.id}>
+          <Grid size={{ xs: 12, sm: 6, md: 4, lg: 3 }} key={theme.id}>
             <ThemeCard
               name={theme.theme_name}
               description={theme.description}

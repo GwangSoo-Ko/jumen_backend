@@ -4,18 +4,18 @@ import { alpha } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
-import AppNavbar from './components/AppNavbar';
-import Header from './components/Header';
-import SideMenu from './components/SideMenu';
+import AppNavbar from '../components/AppNavbar';
+import Header from '../components/Header';
+import SideMenu from '../components/SideMenu';
 import AppTheme from '../shared-theme/AppTheme';
-import ThemeDetailGrid from './components/ThemeDetailGrid';
-import Copyright from './internals/components/Copyright';
+import ThemeDetailGrid from '../components/ThemeDetailGrid';
+import Copyright from '../internals/components/Copyright';
 import {
   chartsCustomizations,
   dataGridCustomizations,
   datePickersCustomizations,
   treeViewCustomizations,
-} from './theme/customizations';
+} from '../theme/customizations';
 
 const xThemeComponents = {
   ...chartsCustomizations,
