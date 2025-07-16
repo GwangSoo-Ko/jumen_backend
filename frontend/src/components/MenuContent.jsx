@@ -12,11 +12,13 @@ import SettingsRoundedIcon from '@mui/icons-material/SettingsRounded';
 import InfoRoundedIcon from '@mui/icons-material/InfoRounded';
 import HelpRoundedIcon from '@mui/icons-material/HelpRounded';
 import { useNavigate } from 'react-router-dom';
+import TroubleshootRoundedIcon from '@mui/icons-material/TroubleshootRounded';
 
 const mainListItems = [
-  { text: '홈', icon: <HomeRoundedIcon />, link: '/dashboard' },
+  { text: '시황 개요', icon: <HomeRoundedIcon />, link: '/overview' },
   { text: '테마', icon: <AnalyticsRoundedIcon />, link: '/themes' },
-  { text: '게시판', icon: <PeopleRoundedIcon />, link: '/board' },
+  { text: '전략 게시판', icon: <TroubleshootRoundedIcon />, link: '/strategy-board' },
+  { text: '자유 게시판', icon: <PeopleRoundedIcon />, link: '/free-board' },
 ];
 
 const secondaryListItems = [

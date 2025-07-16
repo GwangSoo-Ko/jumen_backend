@@ -1,13 +1,11 @@
-import * as React from 'react';
-import { useState } from 'react';
+import React, { useState } from 'react';
+import { TextField, Button, Box } from '@mui/material';
+import { useNavigate } from 'react-router-dom';
 import { alpha } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
-import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
 import AppNavbar from '../components/AppNavbar';
 import Header from '../components/Header';
-import MainGrid from '../components/MainGrid';
-import ThemeGrid from '../components/ThemeGrid';
 import SideMenu from '../components/SideMenu';
 import AppTheme from '../shared-theme/AppTheme';
 import {
@@ -16,6 +14,7 @@ import {
   datePickersCustomizations,
   treeViewCustomizations,
 } from '../theme/customizations';
+import TextEditor from '../components/TextEditor';
 
 const xThemeComponents = {
   ...chartsCustomizations,
@@ -24,8 +23,17 @@ const xThemeComponents = {
   ...treeViewCustomizations,
 };
 
-export default function Dashboard(props) {
-  
+export default function FreeBoardWrite(props) {
+  const [title, setTitle] = useState('');
+  const [content, setContent] = useState('');
+  const navigate = useNavigate();
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    // 실제로는 서버에 POST 요청
+    alert('글이 등록되었습니다!');
+    navigate('/free-board');
+  };
 
   return (
     <AppTheme {...props} themeComponents={xThemeComponents}>
@@ -53,10 +61,25 @@ export default function Dashboard(props) {
             }}
           >
             <Header />
-            <MainGrid />
-          </Stack>
+                <Box component="form" onSubmit={handleSubmit} sx={{ maxWidth: 900, minWidth: 600, mx: 'auto', mt: 4 }}>
+                <h1 style={{ marginBottom: 16 }}>자유 게시판 글쓰기</h1>
+                <input
+                    className="Subject"
+                    placeholder="제목을 입력해 주세요"
+                    style={{padding:'7px', marginBottom:'10px',width:'100%',border:'1px solid lightGray', fontSize:'15px'}}
+                    onChange={(e)=>{setTitle(e.target.value)}}
+                />      
+                    
+                <Box sx={{ mb: 2 }}>
+                <TextEditor value={content} onChange={setContent} />
+                </Box>
+                <Button type="submit" variant="contained" color="primary">
+                    등록
+                </Button>
+                </Box>
+    </Stack>
         </Box>
       </Box>
     </AppTheme>
   );
-}
+} 
