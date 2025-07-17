@@ -14,3 +14,5 @@ pykrx
 TA-Lib
 supabase
 finance-datareader
+passlib
+python-jose[cryptography]

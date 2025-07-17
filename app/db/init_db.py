@@ -7,7 +7,9 @@ from app.db.models.stock_theme_relation import StockThemeRelation
 from app.db.models.theme_info import ThemeInfo
 from app.db.models.index_info import IndexInfo
 from app.db.models.index_ohlcv import IndexOhlcv
-from app.db.models.user import User, SocialAccount
+from app.db.models.user import User
+from app.db.models.account import Account
+from app.db.models.refresh_token import RefreshToken
 
 # 필요한 모든 Base import
 

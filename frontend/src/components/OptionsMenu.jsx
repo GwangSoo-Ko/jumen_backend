@@ -10,7 +10,7 @@ import ListItemIcon, { listItemIconClasses } from '@mui/material/ListItemIcon';
 import LogoutRoundedIcon from '@mui/icons-material/LogoutRounded';
 import MoreVertRoundedIcon from '@mui/icons-material/MoreVertRounded';
 import MenuButton from './MenuButton';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth, fetchWithAuth } from '../contexts/AuthContext';
 
 const MenuItem = styled(MuiMenuItem)({
   margin: '2px 0',
@@ -27,8 +27,16 @@ export default function OptionsMenu() {
     setAnchorEl(null);
   };
   const handleLogout = () => {
+    fetchWithAuth('http://localhost:8000/auth/logout', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refresh_token: localStorage.getItem('refresh_token') })
+    });
     setUser(null); // 전역 로그아웃 처리
+    localStorage.removeItem('access_token');
+    localStorage.removeItem('refresh_token');
     handleClose();
+    window.location.href = '/overview';
   };
   return (
     <React.Fragment>

@@ -11,10 +11,21 @@ import NotificationsRoundedIcon from '@mui/icons-material/NotificationsRounded';
 import MenuButton from './MenuButton';
 import MenuContent from './MenuContent';
 import CardAlert from './CardAlert';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth, fetchWithAuth } from '../contexts/AuthContext';
 
 function SideMenuMobile({ open, toggleDrawer }) {
   const { user, setUser } = useAuth();
+  const handleLogout = () => {
+    fetchWithAuth('http://localhost:8000/auth/logout', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refresh_token: localStorage.getItem('refresh_token') })
+    });
+    setUser(null); // 전역 로그아웃 처리
+    localStorage.removeItem('access_token');
+    localStorage.removeItem('refresh_token');
+    window.location.href = '/overview';
+  };
   return (
     <Drawer
       anchor="right"
@@ -39,12 +50,12 @@ function SideMenuMobile({ open, toggleDrawer }) {
             <Stack direction="row" sx={{ gap: 1, alignItems: 'center', flexGrow: 1, p: 1 }}>
               <Avatar
                 sizes="small"
-                alt={user.username || 'User'}
-                src={user.avatar || '/static/images/avatar/7.jpg'}
+                alt={user.nickname || 'User'}
+                src={user.profile_img || '/static/images/avatar/7.jpg'}
                 sx={{ width: 24, height: 24 }}
               />
               <Typography component="p" variant="h6">
-                {user.username}
+                {user.nickname}
               </Typography>
             </Stack>
           ) : (
@@ -71,7 +82,7 @@ function SideMenuMobile({ open, toggleDrawer }) {
               variant="outlined"
               fullWidth
               startIcon={<LogoutRoundedIcon />}
-              onClick={() => setUser(null)}
+              onClick={handleLogout}
             >
               로그아웃
             </Button>

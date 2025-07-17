@@ -122,7 +122,7 @@ export default function SignUp(props) {
 
   const handleGoogleSignUp = async () => {
     try {
-      const res = await fetch('/auth/google/login');
+      const res = await fetch('http://localhost:8000/auth/google/login');
       const data = await res.json();
       window.location.href = data.auth_url;
     } catch (e) {

@@ -81,13 +81,13 @@ export default function SideMenu() {
         >
           <Avatar
             sizes="small"
-            alt={user.username || 'User'}
-            src={user.avatar || '/static/images/avatar/7.jpg'}
+            alt={user.nickname || 'User'}
+            src={user.profile_img || '/static/images/avatar/7.jpg'}
             sx={{ width: 36, height: 36 }}
           />
           <Box sx={{ mr: 'auto' }}>
             <Typography variant="body2" sx={{ fontWeight: 500, lineHeight: '16px' }}>
-              {user.username}
+              {user.nickname}
             </Typography>
             <Typography variant="caption" sx={{ color: 'text.secondary' }}>
               {user.email || ''}

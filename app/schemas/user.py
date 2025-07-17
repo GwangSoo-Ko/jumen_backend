@@ -2,38 +2,48 @@ from pydantic import BaseModel, EmailStr
 from typing import Optional, List
 from datetime import datetime
 
-class SocialAccountBase(BaseModel):
+class AccountBase(BaseModel):
     provider: str
-    provider_user_id: str
-    access_token: Optional[str] = None
-    refresh_token: Optional[str] = None
+    provider_user_id: Optional[str] = None
+    email: EmailStr
+    # password_hash, access_token, refresh_token 등은 응답에서 제외(보안)
 
-class SocialAccountCreate(SocialAccountBase):
-    pass
-
-class SocialAccountResponse(SocialAccountBase):
+class AccountResponse(AccountBase):
     id: int
     crt_date: Optional[datetime]
     mod_date: Optional[datetime]
-
     class Config:
+        from_attributes = True
+        orm_mode = True
+
+class RefreshTokenResponse(BaseModel):
+    id: int
+    token: str
+    expires_at: datetime
+    crt_date: Optional[datetime]
+    mod_date: Optional[datetime]
+    user_agent: Optional[str]
+    ip_address: Optional[str]
+    class Config:
+        from_attributes = True
         orm_mode = True
 
 class UserBase(BaseModel):
-    username: str
-    email: EmailStr
+    username: Optional[str] = None
+    nickname: str
+    profile_img: Optional[str] = None
     is_active: Optional[bool] = True
     is_superuser: Optional[bool] = False
 
 class UserCreate(UserBase):
-    password: Optional[str] = None  # 소셜 계정은 비밀번호 없이 생성 가능
+    pass
 
 class UserResponse(UserBase):
     id: int
-    last_login: Optional[datetime]
     crt_date: Optional[datetime]
     mod_date: Optional[datetime]
-    social_accounts: List[SocialAccountResponse] = []
-
+    accounts: List[AccountResponse] = []
+    refresh_tokens: List[RefreshTokenResponse] = []
     class Config:
+        from_attributes = True
         orm_mode = True 

@@ -15,9 +15,15 @@ const OAuth2Callback = () => {
           if (!res.ok) throw new Error('구글 인증 실패');
           return res.json();
         })
-        .then(user => {
-          console.log(user);
-          setUser(user); // 로그인 상태 갱신
+        .then(data => {
+          if (data.access_token) {
+            localStorage.setItem('access_token', data.access_token);
+            localStorage.setItem('refresh_token', data.refresh_token);
+          }
+          // 필요시 refresh_token도 저장 가능
+          if (data.user) {
+            setUser(data.user);
+          }
           navigate('/overview');
         })
         .catch(() => {
