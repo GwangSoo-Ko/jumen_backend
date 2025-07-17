@@ -10,6 +10,10 @@ import SelectContent from './SelectContent';
 import MenuContent from './MenuContent';
 import CardAlert from './CardAlert';
 import OptionsMenu from './OptionsMenu';
+import { useAuth } from '../contexts/AuthContext';
+import Button from '@mui/material/Button';
+import { useTheme } from '@mui/material/styles';
+import { useColorScheme } from '@mui/material/styles';
 
 const drawerWidth = 240;
 
@@ -25,6 +29,10 @@ const Drawer = styled(MuiDrawer)({
 });
 
 export default function SideMenu() {
+  const { user } = useAuth();
+  const { mode, systemMode } = useColorScheme();
+  const resolvedMode = mode === 'system' ? systemMode : mode;
+  const isDarkMode = resolvedMode === 'dark';
   return (
     <Drawer
       variant="permanent"
@@ -41,8 +49,12 @@ export default function SideMenu() {
           mt: 'calc(var(--template-frame-height, 0px) + 4px)',
           p: 1.5,
         }}
-      >
-        <SelectContent />
+      ><img
+      src="/jumen_logo_2_transparent.png"
+      alt="JUMEN Logo"
+      style={{ width: '100%', height: 'auto', objectFit: 'contain', filter: isDarkMode ? 'invert(1)' : 'none' }}
+    />
+        {/* <SelectContent /> */}
       </Box>
       <Divider />
       <Box
@@ -56,32 +68,53 @@ export default function SideMenu() {
         <MenuContent />
         {/* <CardAlert /> */}
       </Box>
-      <Stack
-        direction="row"
-        sx={{
-          p: 2,
-          gap: 1,
-          alignItems: 'center',
-          borderTop: '1px solid',
-          borderColor: 'divider',
-        }}
-      >
-        <Avatar
-          sizes="small"
-          alt="GwangSoo Ko"
-          src="/static/images/avatar/7.jpg"
-          sx={{ width: 36, height: 36 }}
-        />
-        <Box sx={{ mr: 'auto' }}>
-          <Typography variant="body2" sx={{ fontWeight: 500, lineHeight: '16px' }}>
-            GwangSoo Ko
-          </Typography>
-          <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-            gwangsoo.ko@jumen.io
-          </Typography>
-        </Box>
-        <OptionsMenu />
-      </Stack>
+      {user ? (
+        <Stack
+          direction="row"
+          sx={{
+            p: 2,
+            gap: 1,
+            alignItems: 'center',
+            borderTop: '1px solid',
+            borderColor: 'divider',
+          }}
+        >
+          <Avatar
+            sizes="small"
+            alt={user.username || 'User'}
+            src={user.avatar || '/static/images/avatar/7.jpg'}
+            sx={{ width: 36, height: 36 }}
+          />
+          <Box sx={{ mr: 'auto' }}>
+            <Typography variant="body2" sx={{ fontWeight: 500, lineHeight: '16px' }}>
+              {user.username}
+            </Typography>
+            <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+              {user.email || ''}
+            </Typography>
+          </Box>
+          <OptionsMenu />
+        </Stack>
+      ) : (
+        <Stack
+          direction="row"
+          sx={{
+            p: 2,
+            gap: 1,
+            alignItems: 'center',
+            borderTop: '1px solid',
+            borderColor: 'divider',
+            justifyContent: 'center',
+          }}
+        >
+          <Button variant="outlined" href="/sign-in" sx={{ mr: 1 }}>
+            로그인
+          </Button>
+          <Button variant="contained" href="/sign-up">
+            회원가입
+          </Button>
+        </Stack>
+      )}
     </Drawer>
   );
 }

@@ -11,8 +11,10 @@ import NotificationsRoundedIcon from '@mui/icons-material/NotificationsRounded';
 import MenuButton from './MenuButton';
 import MenuContent from './MenuContent';
 import CardAlert from './CardAlert';
+import { useAuth } from '../contexts/AuthContext';
 
 function SideMenuMobile({ open, toggleDrawer }) {
+  const { user, setUser } = useAuth();
   return (
     <Drawer
       anchor="right"
@@ -33,34 +35,56 @@ function SideMenuMobile({ open, toggleDrawer }) {
         }}
       >
         <Stack direction="row" sx={{ p: 2, pb: 0, gap: 1 }}>
-          <Stack
-            direction="row"
-            sx={{ gap: 1, alignItems: 'center', flexGrow: 1, p: 1 }}
-          >
-            <Avatar
-              sizes="small"
-              alt="Riley Carter"
-              src="/static/images/avatar/7.jpg"
-              sx={{ width: 24, height: 24 }}
-            />
-            <Typography component="p" variant="h6">
-              Riley Carter
-            </Typography>
-          </Stack>
-          <MenuButton showBadge>
+          {user ? (
+            <Stack direction="row" sx={{ gap: 1, alignItems: 'center', flexGrow: 1, p: 1 }}>
+              <Avatar
+                sizes="small"
+                alt={user.username || 'User'}
+                src={user.avatar || '/static/images/avatar/7.jpg'}
+                sx={{ width: 24, height: 24 }}
+              />
+              <Typography component="p" variant="h6">
+                {user.username}
+              </Typography>
+            </Stack>
+          ) : (
+            <Stack direction="row" sx={{ gap: 1, alignItems: 'center', flexGrow: 1, p: 1 }}>
+              <Avatar sizes="small" sx={{ width: 24, height: 24 }} />
+              <Typography component="p" variant="h6">
+                로그인 필요
+              </Typography>
+            </Stack>
+          )}
+          {/* <MenuButton showBadge>
             <NotificationsRoundedIcon />
-          </MenuButton>
+          </MenuButton> */}
         </Stack>
         <Divider />
         <Stack sx={{ flexGrow: 1 }}>
           <MenuContent />
           <Divider />
         </Stack>
-        <CardAlert />
+        {/* <CardAlert /> */}
         <Stack sx={{ p: 2 }}>
-          <Button variant="outlined" fullWidth startIcon={<LogoutRoundedIcon />}>
-            Logout
-          </Button>
+          {user ? (
+            <Button
+              variant="outlined"
+              fullWidth
+              startIcon={<LogoutRoundedIcon />}
+              onClick={() => setUser(null)}
+            >
+              로그아웃
+            </Button>
+          ) : (
+            <>
+              <Button variant="outlined" fullWidth href="/sign-in" sx={{ mb: 1 }}>
+                로그인
+              </Button>
+              <Button variant="contained" fullWidth href="/sign-up">
+                회원가입
+              </Button>
+            </>
+          )}
         </Stack>
       </Stack>
     </Drawer>

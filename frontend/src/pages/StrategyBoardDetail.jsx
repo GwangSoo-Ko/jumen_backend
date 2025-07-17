@@ -1,5 +1,5 @@
 import React from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { alpha } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import Box from '@mui/material/Box';
@@ -14,6 +14,8 @@ import {
   datePickersCustomizations,
   treeViewCustomizations,
 } from '../theme/customizations';
+import { useAuth } from '../contexts/AuthContext';
+import { useEffect } from 'react';
 
 const xThemeComponents = {
   ...chartsCustomizations,
@@ -30,6 +32,16 @@ const sampleStrategies = [
 
 export default function StrategyBoardDetail(props) {
   const { id } = useParams();
+  const { user } = useAuth();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!user) {
+      alert('로그인 후 상세 내용을 볼 수 있습니다.');
+      navigate('/sign-in');
+    }
+  }, [user, navigate]);
+
   const strategy = sampleStrategies.find((s) => String(s.id) === String(id));
 
   if (!strategy) {

@@ -10,11 +10,14 @@ import FreeBoardWrite from './pages/FreeBoardWrite';
 import StrategyBoardWrite from './pages/StrategyBoardWrite';
 import SignIn from './pages/SignIn';
 import SignUp from './pages/SignUp';
+import OAuth2Callback from './pages/OAuth2Callback';
+import { AuthProvider } from './contexts/AuthContext';
 
 
 function App() {
   return (
-    <BrowserRouter>
+    <AuthProvider>
+      <BrowserRouter>
         <Routes>
           <Route path="/themes" element={<ThemeList />} />
           <Route path="/themes/:id" element={<ThemeDetail />} />
@@ -27,8 +30,10 @@ function App() {
           <Route path="/free-board/write" element={<FreeBoardWrite />} />
           <Route path="/sign-in" element={<SignIn />} />
           <Route path="/sign-up" element={<SignUp />} />
+          <Route path="/oauth2/callback" element={<OAuth2Callback />} />
         </Routes>
-    </BrowserRouter>
+      </BrowserRouter>
+    </AuthProvider>
   );
 }
 

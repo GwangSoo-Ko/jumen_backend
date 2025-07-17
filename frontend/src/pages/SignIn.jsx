@@ -17,6 +17,7 @@ import ForgotPassword from '../components/ForgotPassword';
 import AppTheme from '../shared-theme/AppTheme';
 import ColorModeSelect from '../shared-theme/ColorModeSelect';
 import { GoogleIcon, FacebookIcon, SitemarkIcon } from '../components/CustomIcons';
+import { useNavigate } from 'react-router-dom';
 
 const Card = styled(MuiCard)(({ theme }) => ({
   display: 'flex',
@@ -66,6 +67,7 @@ export default function SignIn(props) {
   const [passwordError, setPasswordError] = React.useState(false);
   const [passwordErrorMessage, setPasswordErrorMessage] = React.useState('');
   const [open, setOpen] = React.useState(false);
+  const navigate = useNavigate();
 
   const handleClickOpen = () => {
     setOpen(true);
@@ -112,6 +114,17 @@ export default function SignIn(props) {
     }
 
     return isValid;
+  };
+
+  const handleGoogleSignIn = async () => {
+    try {
+      const res = await fetch('http://localhost:8000/auth/google/login');
+      const data = await res.json();
+      window.location.href = data.auth_url;
+    } catch (e) {
+      console.error(e);
+      alert('구글 로그인 URL 요청 실패');
+    }
   };
 
   return (
@@ -201,7 +214,7 @@ export default function SignIn(props) {
             <Button
               fullWidth
               variant="outlined"
-              onClick={() => alert('Sign in with Google')}
+              onClick={handleGoogleSignIn}
               startIcon={<GoogleIcon />}
             >
               Sign in with Google

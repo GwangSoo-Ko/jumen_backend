@@ -4,6 +4,7 @@ import Box from '@mui/material/Box';
 import Copyright from '../internals/components/Copyright';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@mui/material';
+import { useAuth } from '../contexts/AuthContext';
 
 const columns = [
   { field: 'id', headerName: 'ID', width: 70 },
@@ -19,12 +20,26 @@ const rows = [
 ];
 
 export default function FreeBoardGrid({ data = rows }) {
+  const { user } = useAuth();
   const navigate = useNavigate();
+  const handleRowClick = (params) => {
+    if (!user) {
+      alert('로그인 후 상세 내용을 볼 수 있습니다.');
+      // navigate('/sign-in');
+      return;
+    }
+    navigate(`/free-board/${params.id}`);
+  };
   return (
     <Box sx={{ width: '100%', maxWidth: { sm: '100%', md: '1700px' }, mx: 'auto', py: 4 }}>
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
         <h1 style={{ margin: '0 16px 0 0' }}>자유 게시판</h1>
-        <Button variant="outlined" size="small" onClick={() => navigate('/free-board/write')}>
+        <Button
+          variant="outlined"
+          size="small"
+          onClick={() => navigate('/free-board/write')}
+          disabled={!user}
+        >
           글쓰기
         </Button>
       </Box>
@@ -34,7 +49,7 @@ export default function FreeBoardGrid({ data = rows }) {
         pageSize={5}
         rowsPerPageOptions={[5, 10, 20]}
         disableSelectionOnClick
-        onRowClick={(params) => navigate(`/free-board/${params.id}`)}
+        onRowClick={handleRowClick}
       />
       <Copyright sx={{ my: 4 }} />
     </Box>

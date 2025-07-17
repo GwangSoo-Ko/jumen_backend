@@ -9,8 +9,8 @@ import '@fontsource/roboto/700.css';
 const root = createRoot(document.getElementById('root'))
 if (root) {
   root.render(
-  <StrictMode>
+  // <StrictMode>
     <App />
-  </StrictMode>,
+  // </StrictMode>,
 )
 }

@@ -16,6 +16,7 @@ import { styled } from '@mui/material/styles';
 import AppTheme from '../shared-theme/AppTheme';
 import ColorModeSelect from '../shared-theme/ColorModeSelect';
 import { GoogleIcon, FacebookIcon, SitemarkIcon } from '../components/CustomIcons';
+import { useNavigate } from 'react-router-dom';
 
 const Card = styled(MuiCard)(({ theme }) => ({
   display: 'flex',
@@ -66,6 +67,7 @@ export default function SignUp(props) {
   const [passwordErrorMessage, setPasswordErrorMessage] = React.useState('');
   const [nameError, setNameError] = React.useState(false);
   const [nameErrorMessage, setNameErrorMessage] = React.useState('');
+  const navigate = useNavigate();
 
   const validateInputs = () => {
     const email = document.getElementById('email');
@@ -116,6 +118,16 @@ export default function SignUp(props) {
       email: data.get('email'),
       password: data.get('password'),
     });
+  };
+
+  const handleGoogleSignUp = async () => {
+    try {
+      const res = await fetch('/auth/google/login');
+      const data = await res.json();
+      window.location.href = data.auth_url;
+    } catch (e) {
+      alert('구글 회원가입 URL 요청 실패');
+    }
   };
 
   return (
@@ -202,7 +214,7 @@ export default function SignUp(props) {
             <Button
               fullWidth
               variant="outlined"
-              onClick={() => alert('Sign up with Google')}
+              onClick={handleGoogleSignUp}
               startIcon={<GoogleIcon />}
             >
               Sign up with Google

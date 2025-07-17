@@ -11,6 +11,7 @@ import DashboardRoundedIcon from '@mui/icons-material/DashboardRounded';
 import SideMenuMobile from './SideMenuMobile';
 import MenuButton from './MenuButton';
 import ColorModeIconDropdown from '../shared-theme/ColorModeIconDropdown';
+import { useColorScheme } from '@mui/material/styles';
 
 const Toolbar = styled(MuiToolbar)({
   width: '100%',
@@ -30,7 +31,9 @@ const Toolbar = styled(MuiToolbar)({
 
 export default function AppNavbar() {
   const [open, setOpen] = React.useState(false);
-
+  const { mode, systemMode } = useColorScheme();
+  const resolvedMode = mode === 'system' ? systemMode : mode;
+  const isDarkMode = resolvedMode === 'dark';
   const toggleDrawer = (newOpen) => () => {
     setOpen(newOpen);
   };
@@ -63,10 +66,15 @@ export default function AppNavbar() {
             spacing={1}
             sx={{ justifyContent: 'center', mr: 'auto' }}
           >
-            <CustomIcon />
+            <img
+      src="/jumen_logo_2_transparent.png"
+      alt="JUMEN Logo"
+      style={{ width: '100%', height: '40px', objectFit: 'contain', filter: isDarkMode ? 'invert(1)' : 'none' }}
+    />
+            {/* <CustomIcon />
             <Typography variant="h4" component="h1" sx={{ color: 'text.primary' }}>
-              Dashboard
-            </Typography>
+              Jumen
+            </Typography> */}
           </Stack>
           <ColorModeIconDropdown />
           <MenuButton aria-label="menu" onClick={toggleDrawer(true)}>

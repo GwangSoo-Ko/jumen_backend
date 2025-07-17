@@ -15,6 +15,8 @@ import {
   treeViewCustomizations,
 } from '../theme/customizations';
 import TextEditor from '../components/TextEditor';
+import { useAuth } from '../contexts/AuthContext';
+import { useEffect } from 'react';
 
 const xThemeComponents = {
   ...chartsCustomizations,
@@ -27,6 +29,14 @@ export default function FreeBoardWrite(props) {
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const navigate = useNavigate();
+  const { user } = useAuth();
+
+  useEffect(() => {
+    if (!user) {
+      alert('로그인 후 이용 가능합니다.');
+      navigate('/sign-in');
+    }
+  }, [user, navigate]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
