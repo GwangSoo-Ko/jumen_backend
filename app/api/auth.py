@@ -1,6 +1,6 @@
 import os
 import httpx
-from fastapi import APIRouter, Depends, HTTPException, Body, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Body, Response, status, Request
 from sqlalchemy.orm import Session
 from app.db.database import SessionLocal
 from app.db.models.user import User
@@ -61,13 +61,20 @@ def create_refresh_token():
     return secrets.token_urlsafe(64)
 
 class RegisterRequest(BaseModel):
-    nickname: str
+    username: str
     email: EmailStr
     password: str
 
 class LoginRequest(BaseModel):
     email: EmailStr
     password: str
+
+class LoginResponse(BaseModel):
+    access_token: str
+    token_type: str
+    refresh_token: str
+    refresh_token_expires_at: str
+    user: UserResponse
 
 class ChangeNicknameRequest(BaseModel):
     user_id: int
@@ -80,15 +87,13 @@ def get_db():
     finally:
         db.close()
 
-@router.post("/auth/register", response_model=UserResponse)
-def register(req: RegisterRequest, db: Session = Depends(get_db)):
-    # 닉네임 중복 체크
-    if db.query(User).filter(User.nickname == req.nickname).first():
-        raise HTTPException(status_code=400, detail="이미 사용 중인 닉네임입니다.")
+@router.post("/auth/email/register", response_model=UserResponse)
+def email_register(req: RegisterRequest, db: Session = Depends(get_db)):
+    nickname = generate_nickname(req.username, db)
     # 이메일+provider 중복 체크 (Account)
     if db.query(Account).filter(Account.provider == 'email', Account.email == req.email).first():
         raise HTTPException(status_code=400, detail="이미 사용 중인 이메일입니다.")
-    user = User(nickname=req.nickname, is_active=True)
+    user = User(nickname=nickname, username=req.username, is_active=True)
     db.add(user)
     db.commit()
     db.refresh(user)
@@ -106,8 +111,8 @@ def register(req: RegisterRequest, db: Session = Depends(get_db)):
     db.commit()
     return user
 
-@router.post("/auth/login", response_model=AccountResponse)
-def login(req: LoginRequest, response: Response, db: Session = Depends(get_db)):
+@router.post("/auth/email/login", response_model=LoginResponse)
+def email_login(req: LoginRequest, response: Response, db: Session = Depends(get_db)):
     account = db.query(Account).filter(Account.provider == 'email', Account.email == req.email).first()
     if not account or not account.password_hash:
         raise HTTPException(status_code=400, detail="이메일 또는 비밀번호가 올바르지 않습니다.")
@@ -141,12 +146,13 @@ def login(req: LoginRequest, response: Response, db: Session = Depends(get_db)):
         samesite="lax",
         max_age=REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60
     )
+    user = db.query(User).filter(User.id == account.user_id).first()
     return {
         "access_token": access_token,
         "token_type": "bearer",
         "refresh_token": refresh_token,
         "refresh_token_expires_at": refresh_expires_at.isoformat(),
-        "account": AccountResponse.model_validate(account)
+        "user": UserResponse.model_validate(user)
     }
 
 @router.get("/auth/google/login")
@@ -163,7 +169,7 @@ def google_login():
     logger.info(f"Google auth URL: {google_auth_url}")
     return {"auth_url": google_auth_url}
 
-@router.get("/auth/google/callback")
+@router.get("/auth/google/callback", response_model=LoginResponse)
 async def google_callback(code: str, db: Session = Depends(get_db)):
     token_url = "https://oauth2.googleapis.com/token"
     data = {
@@ -286,9 +292,14 @@ def change_nickname(req: ChangeNicknameRequest, db: Session = Depends(get_db)):
 class RefreshRequest(BaseModel):
     refresh_token: str
 
-@router.post("/auth/refresh")
-def refresh_token_api(req: RefreshRequest, response: Response, db: Session = Depends(get_db)):
-    hashed = hash_token(req.refresh_token)
+@router.post("/auth/refresh", response_model=LoginResponse)
+def refresh_token_api(request: Request, response: Response, db: Session = Depends(get_db)):
+    # 쿠키에서 refresh_token 읽기
+    refresh_token = request.cookies.get("refresh_token")
+    if not refresh_token:
+        raise HTTPException(status_code=401, detail="리프레시 토큰이 없습니다.")
+    
+    hashed = hash_token(refresh_token)
     token_obj = db.query(RefreshToken).filter(RefreshToken.token == hashed).first()
     if not token_obj or token_obj.expires_at < datetime.now(timezone.utc):
         raise HTTPException(status_code=401, detail="리프레시 토큰이 유효하지 않거나 만료되었습니다.")
@@ -318,6 +329,7 @@ def refresh_token_api(req: RefreshRequest, response: Response, db: Session = Dep
             "email": account.email
         }
     )
+    user = db.query(User).filter(User.id == account.user_id).first()
     # refresh_token을 HTTP Only 쿠키로도 내려줌(보안 강화)
     response.set_cookie(
         key="refresh_token",
@@ -331,19 +343,23 @@ def refresh_token_api(req: RefreshRequest, response: Response, db: Session = Dep
         "access_token": access_token,
         "token_type": "bearer",
         "refresh_token": new_refresh_token,
-        "refresh_token_expires_at": refresh_expires_at.isoformat()
+        "refresh_token_expires_at": refresh_expires_at.isoformat(),
+        "user": UserResponse.model_validate(user)
     }
 
 class LogoutRequest(BaseModel):
     refresh_token: str
 
 @router.post("/auth/logout")
-def logout(req: LogoutRequest, db: Session = Depends(get_db)):
-    hashed = hash_token(req.refresh_token)
-    token_obj = db.query(RefreshToken).filter(RefreshToken.token == hashed).first()
-    if token_obj:
-        db.delete(token_obj)
-        db.commit()
+def logout(request: Request, db: Session = Depends(get_db)):
+    # 쿠키에서 refresh_token 읽기
+    refresh_token = request.cookies.get("refresh_token")
+    if refresh_token:
+        hashed = hash_token(refresh_token)
+        token_obj = db.query(RefreshToken).filter(RefreshToken.token == hashed).first()
+        if token_obj:
+            db.delete(token_obj)
+            db.commit()
     return {"detail": "로그아웃 및 리프레시 토큰 폐기 완료"}
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
@@ -385,4 +401,4 @@ def get_me(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
 
 @router.get("/admin-only")
 def admin_api(current_user: User = Depends(require_superuser)):
-    return {"msg": "관리자만 접근 가능"} 
+    return {"msg": "관리자만 접근 가능"}

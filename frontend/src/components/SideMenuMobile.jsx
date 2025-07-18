@@ -19,11 +19,11 @@ function SideMenuMobile({ open, toggleDrawer }) {
     fetchWithAuth('http://localhost:8000/auth/logout', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ refresh_token: localStorage.getItem('refresh_token') })
+      // refresh_token은 쿠키에서 자동으로 전송됨
     });
     setUser(null); // 전역 로그아웃 처리
     localStorage.removeItem('access_token');
-    localStorage.removeItem('refresh_token');
+    localStorage.removeItem('user_info');
     window.location.href = '/overview';
   };
   return (

@@ -18,7 +18,20 @@ class AccountResponse(AccountBase):
 
 class RefreshTokenResponse(BaseModel):
     id: int
-    token: str
+    # token은 보안상 API 응답에서 제외
+    expires_at: datetime
+    crt_date: Optional[datetime]
+    mod_date: Optional[datetime]
+    user_agent: Optional[str]
+    ip_address: Optional[str]
+    class Config:
+        from_attributes = True
+        orm_mode = True
+
+# 관리자용 refresh token 정보 (필요시 사용)
+class RefreshTokenAdminResponse(BaseModel):
+    id: int
+    token_hash: str  # 해시된 토큰만 노출
     expires_at: datetime
     crt_date: Optional[datetime]
     mod_date: Optional[datetime]
@@ -43,7 +56,7 @@ class UserResponse(UserBase):
     crt_date: Optional[datetime]
     mod_date: Optional[datetime]
     accounts: List[AccountResponse] = []
-    refresh_tokens: List[RefreshTokenResponse] = []
+    # refresh_tokens는 보안상 API 응답에서 제외
     class Config:
         from_attributes = True
         orm_mode = True 

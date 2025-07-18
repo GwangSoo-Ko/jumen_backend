@@ -18,11 +18,11 @@ const OAuth2Callback = () => {
         .then(data => {
           if (data.access_token) {
             localStorage.setItem('access_token', data.access_token);
-            localStorage.setItem('refresh_token', data.refresh_token);
+            // refresh_token은 HTTP Only 쿠키로 관리되므로 localStorage에 저장하지 않음
           }
-          // 필요시 refresh_token도 저장 가능
           if (data.user) {
             setUser(data.user);
+            localStorage.setItem('user_info', JSON.stringify(data.user));
           }
           navigate('/overview');
         })

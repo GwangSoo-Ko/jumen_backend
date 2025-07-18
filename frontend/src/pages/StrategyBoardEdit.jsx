@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import { 
   TextField, 
   Button, 
@@ -19,7 +20,6 @@ import {
   Divider,
   Stack
 } from '@mui/material';
-import { useNavigate } from 'react-router-dom';
 import { alpha } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import AppNavbar from '../components/AppNavbar';
@@ -75,10 +75,12 @@ const performanceLabels = {
   5: '매우 높음'
 };
 
-export default function StrategyBoardWrite(props) {
+export default function StrategyBoardEdit(props) {
+  const { id } = useParams();
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [loading, setLoading] = useState(false);
+  const [fetching, setFetching] = useState(true);
   const [error, setError] = useState('');
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -102,7 +104,50 @@ export default function StrategyBoardWrite(props) {
   const [stockSearch, setStockSearch] = useState('');
   const [themeSearch, setThemeSearch] = useState('');
 
+  // 기존 게시글 데이터 가져오기
+  const fetchPost = async () => {
+    try {
+      setFetching(true);
+      setError('');
 
+      const response = await fetchWithAuth(`http://localhost:8000/strategy-board/posts/${id}`);
+      
+      if (!response.ok) {
+        if (response.status === 404) {
+          throw new Error('게시글을 찾을 수 없습니다.');
+        }
+        throw new Error('게시글을 불러오는데 실패했습니다.');
+      }
+
+      const data = await response.json();
+      
+      // 작성자 확인
+      if (data.user_id !== user.id) {
+        alert('수정 권한이 없습니다.');
+        navigate('/strategy-board');
+        return;
+      }
+
+      setTitle(data.title);
+      setContent(data.content);
+      
+      // 전략 특화 필드들 설정
+      setStrategyType(data.strategy_type || '');
+      setTargetPrice(data.target_price ? data.target_price.toString() : '');
+      setRiskLevel(data.risk_level || 3);
+      setPerformanceRating(data.performance_rating || 3);
+      setEntryPrice(data.entry_price ? data.entry_price.toString() : '');
+      setExitPrice(data.exit_price ? data.exit_price.toString() : '');
+      setHoldingPeriod(data.holding_period || '');
+      setRelatedStockId(data.related_stock_id);
+      setRelatedThemeId(data.related_theme_id);
+      setTags(data.tags || []);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setFetching(false);
+    }
+  };
 
   // 주식 검색
   const searchStocks = async (query) => {
@@ -147,6 +192,10 @@ export default function StrategyBoardWrite(props) {
     setTags(tags.filter(tag => tag !== tagToDelete));
   };
 
+  useEffect(() => {
+    fetchPost();
+  }, [id]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     
@@ -179,8 +228,8 @@ export default function StrategyBoardWrite(props) {
         tags: tags.length > 0 ? tags : null
       };
 
-      const response = await fetchWithAuth('http://localhost:8000/strategy-board/posts', {
-        method: 'POST',
+      const response = await fetchWithAuth(`http://localhost:8000/strategy-board/posts/${id}`, {
+        method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
@@ -189,12 +238,11 @@ export default function StrategyBoardWrite(props) {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.detail || '게시글 등록에 실패했습니다.');
+        throw new Error(errorData.detail || '게시글 수정에 실패했습니다.');
       }
 
-      const data = await response.json();
-    alert('전략이 등록되었습니다!');
-      navigate(`/strategy-board/${data.id}`);
+      alert('전략이 수정되었습니다!');
+      navigate(`/strategy-board/${id}`);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -203,6 +251,80 @@ export default function StrategyBoardWrite(props) {
   };
 
 
+
+  if (fetching) {
+    return (
+      <AppTheme {...props} themeComponents={xThemeComponents}>
+        <CssBaseline enableColorScheme />
+        <Box sx={{ display: 'flex' }}>
+          <SideMenu />
+          <AppNavbar />
+          <Box
+            component="main"
+            sx={(theme) => ({
+              flexGrow: 1,
+              backgroundColor: theme.vars
+                ? `rgba(${theme.vars.palette.background.defaultChannel} / 1)`
+                : alpha(theme.palette.background.default, 1),
+              overflow: 'auto',
+            })}
+          >
+            <Stack
+              spacing={2}
+              sx={{
+                alignItems: 'center',
+                mx: 3,
+                pb: 5,
+                mt: { xs: 8, md: 0 },
+              }}
+            >
+              <Header />
+              <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 400 }}>
+                <CircularProgress />
+              </Box>
+            </Stack>
+          </Box>
+        </Box>
+      </AppTheme>
+    );
+  }
+
+  if (error) {
+    return (
+      <AppTheme {...props} themeComponents={xThemeComponents}>
+        <CssBaseline enableColorScheme />
+        <Box sx={{ display: 'flex' }}>
+          <SideMenu />
+          <AppNavbar />
+          <Box
+            component="main"
+            sx={(theme) => ({
+              flexGrow: 1,
+              backgroundColor: theme.vars
+                ? `rgba(${theme.vars.palette.background.defaultChannel} / 1)`
+                : alpha(theme.palette.background.default, 1),
+              overflow: 'auto',
+            })}
+          >
+            <Stack
+              spacing={2}
+              sx={{
+                alignItems: 'center',
+                mx: 3,
+                pb: 5,
+                mt: { xs: 8, md: 0 },
+              }}
+            >
+              <Header />
+              <Alert severity="error" sx={{ maxWidth: 600 }}>
+                {error}
+              </Alert>
+            </Stack>
+          </Box>
+        </Box>
+      </AppTheme>
+    );
+  }
 
   return (
     <AppTheme {...props} themeComponents={xThemeComponents}>
@@ -226,10 +348,10 @@ export default function StrategyBoardWrite(props) {
             {/* 페이지 제목 */}
             <Box sx={{ mb: 3, textAlign: 'center' }}>
               <Typography variant="h4" component="h1" gutterBottom sx={{ fontWeight: 'bold' }}>
-                📈 전략 게시판 글쓰기
+                📝 전략 게시판 수정
               </Typography>
               <Typography variant="body1" color="text.secondary">
-                투자 전략을 체계적으로 작성해보세요
+                투자 전략을 수정해보세요
               </Typography>
             </Box>
             
@@ -461,7 +583,7 @@ export default function StrategyBoardWrite(props) {
                               label="관련 테마"
                               placeholder="테마명을 검색하세요"
                               disabled={loading}
-                />      
+                            />
                           )}
                           noOptionsText="검색 결과가 없습니다"
                         />
@@ -518,7 +640,7 @@ export default function StrategyBoardWrite(props) {
                           관련 태그를 추가해보세요
                         </Typography>
                       )}
-                </Box>
+                    </Box>
                   </CardContent>
                 </Card>
 
@@ -555,11 +677,11 @@ export default function StrategyBoardWrite(props) {
                           fontWeight: 'bold'
                         }}
                       >
-                        {loading ? '등록 중...' : '전략 등록'}
+                        {loading ? '수정 중...' : '전략 수정'}
                       </Button>
                       <Button 
                         variant="outlined" 
-                        onClick={() => navigate('/strategy-board')}
+                        onClick={() => navigate(`/strategy-board/${id}`)}
                         disabled={loading}
                         size="large"
                         sx={{ 
@@ -570,11 +692,11 @@ export default function StrategyBoardWrite(props) {
                         }}
                       >
                         취소
-                </Button>
-                </Box>
+                      </Button>
+                    </Box>
                   </CardContent>
                 </Card>
-                </Stack>
+              </Stack>
             </Box>
           </Box>
         </Box>

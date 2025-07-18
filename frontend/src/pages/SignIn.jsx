@@ -18,6 +18,57 @@ import AppTheme from '../shared-theme/AppTheme';
 import ColorModeSelect from '../shared-theme/ColorModeSelect';
 import { GoogleIcon, FacebookIcon, SitemarkIcon } from '../components/CustomIcons';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
+
+// 커스텀 훅: localStorage 변경 감지
+const useDarkMode = () => {
+  const [isDarkMode, setIsDarkMode] = React.useState(false);
+  const [mounted, setMounted] = React.useState(false);
+
+  React.useEffect(() => {
+    setMounted(true);
+    
+    // 초기값 설정
+    const checkDarkMode = () => {
+      const mode = localStorage.getItem('mui-mode');
+      const isDark = mode === 'dark' || (mode === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+      setIsDarkMode(isDark);
+    };
+
+    checkDarkMode();
+
+    // storage 이벤트 리스너 (다른 탭에서 변경된 경우)
+    const handleStorageChange = (e) => {
+      if (e.key === 'mui-mode') {
+        checkDarkMode();
+      }
+    };
+
+    // 시스템 다크모드 변경 감지
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    const handleSystemChange = () => {
+      checkDarkMode();
+    };
+
+    // DOM 변경 감지 (mui-mode 속성 변경 시)
+    const observer = new MutationObserver(checkDarkMode);
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['data-mui-color-scheme']
+    });
+
+    window.addEventListener('storage', handleStorageChange);
+    mediaQuery.addEventListener('change', handleSystemChange);
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      mediaQuery.removeEventListener('change', handleSystemChange);
+      observer.disconnect();
+    };
+  }, []);
+
+  return { isDarkMode, mounted };
+};
 
 const Card = styled(MuiCard)(({ theme }) => ({
   display: 'flex',
@@ -67,7 +118,11 @@ export default function SignIn(props) {
   const [passwordError, setPasswordError] = React.useState(false);
   const [passwordErrorMessage, setPasswordErrorMessage] = React.useState('');
   const [open, setOpen] = React.useState(false);
+  const [isLoading, setIsLoading] = React.useState(false);
+  const [apiError, setApiError] = React.useState('');
   const navigate = useNavigate();
+  const { setUser } = useAuth();
+  const { isDarkMode, mounted } = useDarkMode();
 
   const handleClickOpen = () => {
     setOpen(true);
@@ -77,16 +132,74 @@ export default function SignIn(props) {
     setOpen(false);
   };
 
-  const handleSubmit = (event) => {
+  const loginUser = async (loginData) => {
+    try {
+      const response = await fetch('http://localhost:8000/auth/email/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(loginData),
+        credentials: 'include', // 쿠키 포함
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || '로그인에 실패했습니다.');
+      }
+
+      const result = await response.json();
+      return result;
+    } catch (error) {
+      if (error.name === 'TypeError') {
+        throw new Error('네트워크 오류가 발생했습니다. 서버에 연결할 수 없습니다.');
+      }
+      throw error;
+    }
+  };
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    
     if (emailError || passwordError) {
-      event.preventDefault();
       return;
     }
+
+    if (!validateInputs()) {
+      return;
+    }
+
+    setIsLoading(true);
+    setApiError('');
+
     const data = new FormData(event.currentTarget);
-    console.log({
+    const loginData = {
       email: data.get('email'),
       password: data.get('password'),
-    });
+    };
+
+    try {
+      const result = await loginUser(loginData);
+      console.log('로그인 성공:', result);
+      
+      // access_token을 localStorage에 저장
+      localStorage.setItem('access_token', result.access_token);
+      
+      // AuthContext의 인증 상태 업데이트
+      if (result.user) {
+        setUser(result.user);
+        localStorage.setItem('user_info', JSON.stringify(result.user));
+      }
+      
+      // 성공 메시지 표시 후 Overview 페이지로 이동
+      alert('로그인에 성공했습니다!');
+      navigate('/overview');
+    } catch (error) {
+      console.error('로그인 실패:', error);
+      setApiError(error.message);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const validateInputs = () => {
@@ -133,13 +246,17 @@ export default function SignIn(props) {
       <SignInContainer direction="column" justifyContent="space-between">
         <ColorModeSelect sx={{ position: 'fixed', top: '1rem', right: '1rem' }} />
         <Card variant="outlined">
-          <SitemarkIcon />
+            <img
+          src="/jumen_logo_2_transparent.png"
+          alt="JUMEN Logo"
+          style={{ width: '100%', height: '40px', objectFit: 'contain', filter: mounted && isDarkMode ? 'invert(1)' : 'none' }}
+        />
           <Typography
             component="h1"
             variant="h4"
             sx={{ width: '100%', fontSize: 'clamp(2rem, 10vw, 2.15rem)' }}
           >
-            Sign in
+            로그인
           </Typography>
           <Box
             component="form"
@@ -153,7 +270,7 @@ export default function SignIn(props) {
             }}
           >
             <FormControl>
-              <FormLabel htmlFor="email">Email</FormLabel>
+              <FormLabel htmlFor="email">이메일</FormLabel>
               <TextField
                 error={emailError}
                 helperText={emailErrorMessage}
@@ -170,7 +287,7 @@ export default function SignIn(props) {
               />
             </FormControl>
             <FormControl>
-              <FormLabel htmlFor="password">Password</FormLabel>
+              <FormLabel htmlFor="password">비밀번호</FormLabel>
               <TextField
                 error={passwordError}
                 helperText={passwordErrorMessage}
@@ -184,20 +301,25 @@ export default function SignIn(props) {
                 fullWidth
                 variant="outlined"
                 color={passwordError ? 'error' : 'primary'}
-              />
+              />  
             </FormControl>
             <FormControlLabel
               control={<Checkbox value="remember" color="primary" />}
-              label="Remember me"
+              label="기억하기"
             />
             <ForgotPassword open={open} handleClose={handleClose} />
+            {apiError && (
+              <Typography color="error" variant="body2" sx={{ textAlign: 'center' }}>
+                {apiError}
+              </Typography>
+            )}
             <Button
               type="submit"
               fullWidth
               variant="contained"
-              onClick={validateInputs}
+              disabled={isLoading}
             >
-              Sign in
+              {isLoading ? '로그인 중...' : '로그인'}
             </Button>
             <Link
               component="button"
@@ -206,7 +328,7 @@ export default function SignIn(props) {
               variant="body2"
               sx={{ alignSelf: 'center' }}
             >
-              Forgot your password?
+              비밀번호 찾기
             </Link>
           </Box>
           <Divider>or</Divider>
@@ -217,24 +339,24 @@ export default function SignIn(props) {
               onClick={handleGoogleSignIn}
               startIcon={<GoogleIcon />}
             >
-              Sign in with Google
+              구글 로그인
             </Button>
-            <Button
+            {/* <Button
               fullWidth
               variant="outlined"
-              onClick={() => alert('Sign in with Facebook')}
+              onClick={() => alert('페이스북 로그인')}
               startIcon={<FacebookIcon />}
             >
-              Sign in with Facebook
-            </Button>
+              페이스북 로그인
+            </Button> */}
             <Typography sx={{ textAlign: 'center' }}>
-              Don&apos;t have an account?{' '}
+              계정이 없으신가요?{' '}
               <Link
                 href="/sign-up"
                 variant="body2"
                 sx={{ alignSelf: 'center' }}
               >
-                Sign up
+                회원가입
               </Link>
             </Typography>
           </Box>

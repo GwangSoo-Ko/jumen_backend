@@ -14,8 +14,6 @@ import {
   datePickersCustomizations,
   treeViewCustomizations,
 } from '../theme/customizations';
-import { useAuth } from '../contexts/AuthContext';
-
 const xThemeComponents = {
   ...chartsCustomizations,
   ...dataGridCustomizations,
@@ -24,7 +22,6 @@ const xThemeComponents = {
 };
 
 export default function StrategyBoard(props) {
-  const { user } = useAuth();
   return (
     <AppTheme {...props} themeComponents={xThemeComponents}>
       <CssBaseline enableColorScheme />
@@ -51,7 +48,7 @@ export default function StrategyBoard(props) {
             }}
           >
             <Header />
-            <StrategyBoardGrid user={user} />
+            <StrategyBoardGrid />
           </Stack>
         </Box>
       </Box>

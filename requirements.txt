@@ -16,3 +16,4 @@ supabase
 finance-datareader
 passlib
 python-jose[cryptography]
+bcrypt
