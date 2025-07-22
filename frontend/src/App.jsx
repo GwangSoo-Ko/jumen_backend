@@ -1,6 +1,8 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import ThemeList from './pages/ThemeList';
 import ThemeDetail from './pages/ThemeDetail';
+import SectorList from './pages/SectorList';
+import SectorDetail from './pages/SectorDetail';
 import OverView from './pages/OverView';
 import StrategyBoard from './pages/StrategyBoard';
 import FreeBoard from './pages/FreeBoard';
@@ -23,13 +25,10 @@ function App() {
           {/* 공개 페이지 */}
           <Route path="/themes" element={<ThemeList />} />
           <Route path="/themes/:id" element={<ThemeDetail />} />
-          
+          <Route path="/sectors" element={<SectorList />} />
+          <Route path="/sectors/:id" element={<SectorDetail />} />
+          <Route path="/overview" element={<OverView />} />
           {/* 인증이 필요한 페이지 */}
-          <Route path="/overview" element={
-            <ProtectedRoute>
-              <OverView />
-            </ProtectedRoute>
-          } />
           <Route path="/strategy-board" element={
             <ProtectedRoute>
               <StrategyBoard />

@@ -103,7 +103,7 @@ class StockOhlcvService:
                 except Exception as e:
                     print(f"  ✗ {tk} 에러: {e}")
                 time.sleep(1)
-                # self.add_indicators(result[tk])
+                self.add_indicators(result[tk])
 
         return result
     

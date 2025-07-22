@@ -301,7 +301,9 @@ def refresh_token_api(request: Request, response: Response, db: Session = Depend
     
     hashed = hash_token(refresh_token)
     token_obj = db.query(RefreshToken).filter(RefreshToken.token == hashed).first()
-    if not token_obj or token_obj.expires_at < datetime.now(timezone.utc):
+    # timezone-naive datetime을 timezone-aware로 변환
+    expires_at_aware = token_obj.expires_at.replace(tzinfo=timezone.utc) if token_obj.expires_at.tzinfo is None else token_obj.expires_at
+    if not token_obj or expires_at_aware < datetime.now(timezone.utc):
         raise HTTPException(status_code=401, detail="리프레시 토큰이 유효하지 않거나 만료되었습니다.")
     account = db.query(Account).filter(Account.id == token_obj.account_id).first()
     if not account:

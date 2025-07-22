@@ -9,7 +9,7 @@ class RefreshToken(TimestampMixin, Base):
     user_id = Column(BigInteger, ForeignKey('tb_user.id', ondelete='CASCADE'), nullable=False)
     account_id = Column(BigInteger, ForeignKey('tb_account.id', ondelete='CASCADE'), nullable=False)
     token = Column(String(512), unique=True, nullable=False)
-    expires_at = Column(DateTime, nullable=False)
+    expires_at = Column(DateTime(timezone=True), nullable=False)
     user_agent = Column(String(255), nullable=True)
     ip_address = Column(String(45), nullable=True)
     user = relationship('User', back_populates='refresh_tokens')

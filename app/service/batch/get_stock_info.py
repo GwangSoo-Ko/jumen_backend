@@ -8,7 +8,10 @@ from sqlalchemy.dialects.postgresql import insert
 class StockInfoService:
     def __init__(self):
         self.db = SessionLocal()
-        self.api_url, self.token = update_kiwoom_token.get_kiwoom_api_url_and_valid_token()
+        result = update_kiwoom_token.get_kiwoom_api_url_and_valid_token()
+        if result is None or result[0] is None or result[1] is None:
+            raise ValueError("키움 API URL 또는 토큰을 가져올 수 없습니다. 계정 정보와 API 키를 확인해주세요.")
+        self.api_url, self.token = result
 
     def get_stock_list(self, market_type: str):
         if market_type == '0':

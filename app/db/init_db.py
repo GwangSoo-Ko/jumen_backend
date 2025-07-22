@@ -4,7 +4,8 @@ from app.db.models.kiwoom_api_info import KiwoomApiInfo
 from app.db.models.stock_info import StockInfo
 from app.db.models.stock_ohlcv import StockOhlcv
 from app.db.models.stock_theme_relation import StockThemeRelation
-from app.db.models.theme_info import ThemeInfo
+from app.db.models.sector_info import SectorInfo
+from app.db.models.stock_sector_relation import StockSectorRelation
 from app.db.models.index_info import IndexInfo
 from app.db.models.index_ohlcv import IndexOhlcv
 from app.db.models.user import User
@@ -46,8 +47,39 @@ def init_db():
             print("기본 전략 게시판 생성 완료")
         else:
             print("기본 전략 게시판이 이미 존재합니다.")
+            
+        # 기본 지수 데이터 삽입
+        existing_index = db.query(IndexInfo).first()
+        if not existing_index:
+            default_indices = [
+                IndexInfo(name='KS11', description='KOSPI 지수', order_no=1),
+                IndexInfo(name='KQ11', description='KOSDAQ 지수', order_no=2),
+                IndexInfo(name='KS200', description='KOSPI200 지수', order_no=3),
+                IndexInfo(name='DJI', description='다우존스 지수', order_no=4),
+                IndexInfo(name='IXIC', description='나스닥 지수', order_no=5),
+                IndexInfo(name='S&P500', description='S&P500 지수', order_no=6),
+                IndexInfo(name='RUT', description='러셀 2000 지수', order_no=7),
+                IndexInfo(name='VIX', description='VIX 지수', order_no=8),
+                IndexInfo(name='USD/KRW', description='미국 달러/한국 원 환율', order_no=9),
+                IndexInfo(name='BTC/KRW', description='비트코인/원화', order_no=10),
+                IndexInfo(name='CL=F', description='WTI유 선물', order_no=11),
+                IndexInfo(name='BZ=F', description='브렌트유 선물', order_no=12),
+                IndexInfo(name='NG=F', description='천연가스 선물', order_no=13),
+                IndexInfo(name='GC=F', description='금 선물', order_no=14),
+                IndexInfo(name='SI=F', description='은 선물', order_no=15),
+                IndexInfo(name='HG=F', description='구리 선물', order_no=16),
+                IndexInfo(name='US5YT', description='5년 만기 미국채', order_no=17),
+                IndexInfo(name='US10YT', description='10년 만기 미국채', order_no=18),
+                IndexInfo(name='US30YT', description='30년 만기 미국채', order_no=19),
+            ]
+            db.add_all(default_indices)
+            db.commit()
+            print("기본 지수 데이터 삽입 완료")
+        else:
+            print("기본 지수 데이터가 이미 존재합니다.")
+            
     except Exception as e:
-        print(f"전략 게시판 생성 중 오류: {e}")
+        print(f"데이터 생성 중 오류: {e}")
         db.rollback()
     finally:
         db.close()

@@ -70,7 +70,6 @@ const columns = [
       return value.toLocaleString();
     },
   },
-  { field: 'description', headerName: '비고', width: 200, flex: 1, headerAlign: 'center' },
   {
     field: 'mod_date',
     headerName: '마지막 업데이트',
@@ -95,7 +94,7 @@ const columns = [
   },
 ];
 
-export default function ThemeDetailGrid({ stocks }) {
+export default function SectorDetailGrid({ stocks }) {
   // DataGrid는 각 row에 id 필드가 필요함. stock_id를 id로 매핑.
   const rows = React.useMemo(
     () => stocks.map((row, idx) => ({ ...row, id: row.stock_id ?? idx })),

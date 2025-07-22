@@ -17,6 +17,7 @@ import TroubleshootRoundedIcon from '@mui/icons-material/TroubleshootRounded';
 const mainListItems = [
   { text: '시황 개요', icon: <HomeRoundedIcon />, link: '/overview' },
   { text: '테마', icon: <AnalyticsRoundedIcon />, link: '/themes' },
+  { text: '업종', icon: <AnalyticsRoundedIcon />, link: '/sectors' },
   { text: '전략 게시판', icon: <TroubleshootRoundedIcon />, link: '/strategy-board' },
   { text: '자유 게시판', icon: <PeopleRoundedIcon />, link: '/free-board' },
 ];

@@ -19,7 +19,7 @@ def get_db():
 
 @router.get("/themes", response_model=List[ThemeInfoResponse])
 def read_themes(db: Session = Depends(get_db)):
-    themes = db.query(ThemeInfo).all()
+    themes = db.query(ThemeInfo).order_by(ThemeInfo.change_rate.desc()).all()
     if not themes:
         raise HTTPException(status_code=404, detail="Themes not found")
     return themes

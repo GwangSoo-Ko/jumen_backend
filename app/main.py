@@ -5,11 +5,18 @@ from app.api import index_info
 from app.api import auth
 from app.api import strategy_board
 from app.api import free_board
+from app.api import sector_info
 from app.db.init_db import init_db
+from app.service.batch.daemon import start_scheduler, shutdown_scheduler
 
 init_db()
 
-app = FastAPI()
+async def lifespan(app):
+    await start_scheduler()
+    yield
+    await shutdown_scheduler()
+
+app = FastAPI(lifespan=lifespan)
 
 # CORS 미들웨어 추가
 app.add_middleware(
@@ -25,7 +32,7 @@ app.include_router(index_info.router)
 app.include_router(auth.router)
 app.include_router(strategy_board.router)
 app.include_router(free_board.router)
-
+app.include_router(sector_info.router)
 @app.get("/")
 def read_root():
     return {"message": "Stock Theme Backend API"}

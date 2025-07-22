@@ -62,4 +62,4 @@ class IndexOhlcvService:
 
 if __name__ == '__main__':
     index_ohlcv_service = IndexOhlcvService()
-    index_ohlcv_service.download_and_upsert_all_index_ohlcv('2020-01-01', '2025-07-14')
+    index_ohlcv_service.download_and_upsert_all_index_ohlcv('2020-01-01', '2025-07-22')

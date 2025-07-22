@@ -17,6 +17,7 @@ import {
   treeViewCustomizations,
 } from '../theme/customizations';
 import { useAuth, fetchWithAuth } from '../contexts/AuthContext';
+import Copyright from '../internals/components/Copyright';
 
 const xThemeComponents = {
   ...chartsCustomizations,
@@ -415,6 +416,7 @@ export default function StrategyBoardDetail(props) {
               </Box>
             </Box>
           </Stack>
+          <Copyright sx={{ my: 4 }} />
         </Box>
       </Box>
     </AppTheme>
