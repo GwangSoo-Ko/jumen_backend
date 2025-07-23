@@ -8,6 +8,7 @@ from app.api import free_board
 from app.api import sector_info
 from app.db.init_db import init_db
 from app.service.batch.daemon import start_scheduler, shutdown_scheduler
+from datetime import datetime
 
 init_db()
 
@@ -36,3 +37,8 @@ app.include_router(sector_info.router)
 @app.get("/")
 def read_root():
     return {"message": "Stock Theme Backend API"}
+
+@app.get("/health")
+def health_check():
+    current_time = datetime.now().isoformat()
+    return {"status": "healthy", "timestamp": current_time}

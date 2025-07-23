@@ -1,0 +1,61 @@
+version: "3.8"
+
+services:
+  # PostgreSQL 데이터베이스
+  db:
+    image: postgres:15
+    restart: always
+    environment:
+      POSTGRES_USER: jumen_user
+      POSTGRES_PASSWORD: jumen_password
+      POSTGRES_DB: jumen_db
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - jumen_network
+
+  # Python 백엔드 (FastAPI)
+  backend:
+    build:
+      context: ./app
+      dockerfile: Dockerfile
+    restart: always
+    depends_on:
+      - db
+    environment:
+      # 데이터베이스 연결 정보
+      DATABASE_URL: postgresql://jumen_user:jumen_password@db:5432/jumen_db
+      # 기타 환경변수 (필요시 추가)
+      - ENVIRONMENT=production
+    ports:
+      - "8000:8000"
+    volumes:
+      # 로그 파일 마운트 (필요시)
+      - ./logs:/app/logs
+    networks:
+      - jumen_network
+
+  # React 프론트엔드
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    restart: always
+    depends_on:
+      - backend
+    ports:
+      - "80:80"
+    networks:
+      - jumen_network
+
+# 볼륨 정의
+volumes:
+  db_data:
+    driver: local
+
+# 네트워크 정의
+networks:
+  jumen_network:
+    driver: bridge 

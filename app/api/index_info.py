@@ -1,4 +1,7 @@
-from fastapi import APIRouter, Depends, Query
+import logging
+logger = logging.getLogger('app.api')
+
+from fastapi import APIRouter, Depends, Query, HTTPException
 from app.db.database import SessionLocal
 from app.schemas.index_detail import IndexDetailResponse
 from app.db.models.index_info import IndexInfo
@@ -15,6 +18,28 @@ def get_db():
         yield db
     finally:
         db.close()
+
+@router.get('/index/{index_code}')
+def get_index(index_code: str, db: Session = Depends(get_db)):
+    index = db.query(IndexInfo).filter(IndexInfo.code == index_code).first()
+    if not index:
+        logger.warning(f'Index not found: {index_code}')
+        raise HTTPException(status_code=404, detail='Index not found')
+    logger.info(f'Index found: {index_code}')
+    return index
+
+@router.get('/index/{index_code}/ohlcv')
+def get_index_ohlcv(index_code: str, db: Session = Depends(get_db)):
+    index = db.query(IndexInfo).filter(IndexInfo.code == index_code).first()
+    if not index:
+        logger.warning(f'Index not found: {index_code}')
+        raise HTTPException(status_code=404, detail='Index not found')
+    ohlcv = db.query(IndexOhlcv).filter(IndexOhlcv.index_id == index.id).all()
+    if not ohlcv:
+        logger.warning(f'OHLCV not found for index: {index_code}')
+        raise HTTPException(status_code=404, detail='OHLCV not found')
+    logger.info(f'OHLCV found for index: {index_code}, count={len(ohlcv)}')
+    return ohlcv
 
 @router.get("/index/{index_id}", response_model=list[IndexDetailResponse])
 def get_index_detail(index_id: int, db: Session = Depends(get_db)):
@@ -37,6 +62,10 @@ def get_index_detail(index_id: int, db: Session = Depends(get_db)):
         .order_by(IndexOhlcv.ymd.asc())
         .all()
     )
+    if not results:
+        logger.warning(f'No results found for index: {index_id}')
+        raise HTTPException(status_code=404, detail='No results found')
+    logger.info(f'Index detail found for index: {index_id}, count={len(results)}')
     return [IndexDetailResponse(**dict(r._mapping)) for r in results]
 
 @router.get("/index_all")
@@ -89,5 +118,10 @@ def get_index_detail_all(n_days: int = Query(30, ge=1, le=365), db: Session = De
             **meta[idx],
             'ohlcv': ohlcv_list
         })
+
+    if not result:
+        logger.warning(f'No results found for index_all')
+        raise HTTPException(status_code=404, detail='No results found')
+    logger.info(f'Index detail found for index_all, count={len(result)}')
 
     return result

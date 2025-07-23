@@ -19,7 +19,7 @@ from app.schemas.board import (
 )
 from app.api.auth import get_current_user
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('app.api')
 router = APIRouter(prefix="/strategy-board", tags=["전략게시판"])
 
 def get_db():

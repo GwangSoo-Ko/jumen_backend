@@ -1,0 +1,31 @@
+version: "3.8"
+
+services:
+  db:
+    environment:
+      POSTGRES_USER: jumen_dev
+      POSTGRES_PASSWORD: dev_password
+      POSTGRES_DB: jumen_dev_db
+    ports:
+      - "5432:5432"
+
+  backend:
+    environment:
+      DATABASE_URL: postgresql://jumen_dev:dev_password@db:5432/jumen_dev_db
+      ENVIRONMENT: development
+      DEBUG: "true"
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./app:/app  # 개발 시 소스 코드 마운트
+      - ./logs:/app/logs
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev  # 개발용 Dockerfile
+    ports:
+      - "3000:3000"  # 개발 서버 포트
+    volumes:
+      - ./frontend:/app  # 개발 시 소스 코드 마운트
+      - /app/node_modules 

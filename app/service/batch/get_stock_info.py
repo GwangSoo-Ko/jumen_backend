@@ -1,9 +1,13 @@
+import logging
 from app.service.kiwoom import kiwoom_client, constant, update_kiwoom_token
 from app.db.database import SessionLocal
 from app.config import os
-from datetime import datetime
+from datetime import datetime, timezone
 from app.db.models.stock_info import StockInfo
 from sqlalchemy.dialects.postgresql import insert
+from dotenv import load_dotenv
+
+logger = logging.getLogger('app.service.batch')
 
 class StockInfoService:
     def __init__(self):
@@ -53,15 +57,15 @@ class StockInfoService:
                         elif warning_status == '5':
                             warning_status = '투자경고'
                         else:
-                            print(f"ticker: {ticker}, name: {name}, sector: {sector}, size: {size}, company_class: {company_class}, listed_count: {listed_count}, listed_date: {listed_date}, market: {market}, warning_status: {warning_status}")
+                            logger.debug(f"ticker: {ticker}, name: {name}, sector: {sector}, size: {size}, company_class: {company_class}, listed_count: {listed_count}, listed_date: {listed_date}, market: {market}, warning_status: {warning_status}")
                             continue
                         if market == '코스피':
                             if sector == '' or company_class == '스팩':
-                                print(f"ticker: {ticker}, name: {name}, sector: {sector}, size: {size}, company_class: {company_class}, listed_count: {listed_count}, listed_date: {listed_date}, market: {market}, warning_status: {warning_status}")
+                                logger.debug(f"ticker: {ticker}, name: {name}, sector: {sector}, size: {size}, company_class: {company_class}, listed_count: {listed_count}, listed_date: {listed_date}, market: {market}, warning_status: {warning_status}")
                                 continue
                         elif market == '코스닥':
                             if company_class == '스팩':
-                                print(f"ticker: {ticker}, name: {name}, sector: {sector}, size: {size}, company_class: {company_class}, listed_count: {listed_count}, listed_date: {listed_date}, market: {market}, warning_status: {warning_status}")
+                                logger.debug(f"ticker: {ticker}, name: {name}, sector: {sector}, size: {size}, company_class: {company_class}, listed_count: {listed_count}, listed_date: {listed_date}, market: {market}, warning_status: {warning_status}")
                                 continue
                         stock_data_list.append({
                             'ticker': ticker,
@@ -72,7 +76,8 @@ class StockInfoService:
                             'size': size,
                             'company_class': company_class,
                             'listed_count': listed_count,
-                            'warning_status': warning_status
+                            'warning_status': warning_status,
+                            'mod_date': datetime.now(timezone.utc)
                         })
                     if stock_data_list:
                         stmt = insert(StockInfo).values(stock_data_list)
@@ -85,6 +90,7 @@ class StockInfoService:
                             'company_class': stmt.excluded.company_class,
                             'listed_count': stmt.excluded.listed_count,
                             'warning_status': stmt.excluded.warning_status,
+                            'mod_date': stmt.excluded.mod_date,
                         }
                         stmt = stmt.on_conflict_do_update(
                             index_elements=['ticker'],
@@ -93,9 +99,9 @@ class StockInfoService:
                         db.execute(stmt)
                         db.commit()
                 else:
-                    print("No data found")
+                    logger.warning("No data found")
             else:
-                print(f"Error: {response.status_code}")
+                logger.error(f"Error: {response.status_code}")
         finally:
             db.close()
 
@@ -107,14 +113,56 @@ class StockInfoService:
         API 응답을 출력하는 함수
         :param response: API 응답 객체
         """
-        print(f"Status Code: {response.status_code}")
-        print(f"Response: {response.json()}")
+        logger.debug(f"Status Code: {response.status_code}")
+        logger.debug(f"Response: {response.json()}")
 
+def setup_logging():
+    load_dotenv()
+    ENV = os.getenv('ENV', 'development')
+    # 로그 디렉토리 생성
+    log_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'logs')
+    os.makedirs(log_dir, exist_ok=True)
+    
+    # 로그 파일명 설정 (날짜 포함)
+    today = datetime.now().strftime('%Y-%m-%d')
+    log_filename = f'get_stock_info_{today}.log'
+    log_filepath = os.path.join(log_dir, log_filename)
+    
+    # 로깅 설정 - 파일과 콘솔 모두에 출력
+    logger.setLevel(logging.WARNING)
+    
+    # 기존 핸들러 제거 (중복 방지)
+    for handler in logger.handlers[:]:
+        logger.removeHandler(handler)
+    
+    # 파일 핸들러 설정
+    file_handler = logging.FileHandler(log_filepath, encoding='utf-8')
+    file_handler.setLevel(logging.WARNING)
+    
+    # 포맷터 설정
+    formatter = logging.Formatter(
+        '%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+        datefmt='%Y-%m-%d %H:%M:%S'
+    )
+    file_handler.setFormatter(formatter)
+    logger.addHandler(file_handler)
+    
+    # 콘솔 핸들러는 production이 아닐 때만 추가
+    if ENV != 'production':
+        console_handler = logging.StreamHandler()
+        console_handler.setLevel(logging.WARNING)
+        console_handler.setFormatter(formatter)
+        logger.addHandler(console_handler)
 
-if __name__ == "__main__":
+def main():
+    """메인 실행 함수"""
+    setup_logging()
     stock_info_service = StockInfoService()
     try:
         stock_info_service.get_stock_list('0')
         stock_info_service.get_stock_list('10')
     except Exception as e:
-        print(f"Error: {e}")
+        logger.error(f"Error: {e}")
+
+if __name__ == "__main__":
+    main()

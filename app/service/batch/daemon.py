@@ -3,15 +3,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 import asyncio
 from datetime import datetime
 
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s [%(levelname)s] %(message)s',
-    handlers=[
-        logging.FileHandler('batch_daemon.log'),
-        logging.StreamHandler()
-    ]
-)
-logger = logging.getLogger('batch_daemon')
+logger = logging.getLogger('app.service.batch')
 
 scheduler = None  # 전역 스케줄러 인스턴스
 
@@ -35,8 +27,8 @@ def run_crawl_naver_sector_info():
 def run_get_index_ohlcv():
     try:
         from app.service.batch import get_index_ohlcv
-        today = datetime.now().strftime('%Y-%m-%d')
-        get_index_ohlcv.IndexOhlcvService().download_and_upsert_all_index_ohlcv('2020-01-01', today)
+        # main() 함수를 호출하여 로깅 설정이 적용되도록 함
+        get_index_ohlcv.main()
         logger.info('get_index_ohlcv 실행 완료')
     except Exception as e:
         logger.exception(f'get_index_ohlcv 실행 오류: {e}')
@@ -44,9 +36,8 @@ def run_get_index_ohlcv():
 def run_get_stock_info():
     try:
         from app.service.batch import get_stock_info
-        svc = get_stock_info.StockInfoService()
-        svc.get_stock_list('0')
-        svc.get_stock_list('10')
+        # main() 함수를 호출하여 로깅 설정이 적용되도록 함
+        get_stock_info.main()
         logger.info('get_stock_info 실행 완료')
     except Exception as e:
         logger.exception(f'get_stock_info 실행 오류: {e}')

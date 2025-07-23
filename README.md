@@ -136,6 +136,9 @@ alembic upgrade head
 
 # 개발 서버 실행
 uvicorn app.main:app --reload
+
+# frontend 실행
+npm run dev
 ```
 
 - **Supabase 연결**: 

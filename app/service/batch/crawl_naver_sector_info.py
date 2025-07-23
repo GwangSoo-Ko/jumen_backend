@@ -1,4 +1,6 @@
 import asyncio
+import logging
+import os
 from playwright.async_api import async_playwright
 import pandas as pd
 from app.db.database import SessionLocal
@@ -7,12 +9,15 @@ from datetime import datetime, timezone
 from app.db.models.stock_info import StockInfo
 from app.db.models.sector_info import SectorInfo
 from app.db.models.stock_sector_relation import StockSectorRelation
+from dotenv import load_dotenv
+
+logger = logging.getLogger('app.service.batch')
 
 NAVER_SECTOR_URL = "https://finance.naver.com/sise/sise_group.naver?type=upjong"
 
 async def fetch_sector_table(page):
     rows = await page.locator('table.type_1 > tbody > tr').all()
-    print(f"  row 개수: {len(rows)}")
+    logger.debug(f"  row 개수: {len(rows)}")
     sector_data = []
     for idx, row in enumerate(rows):
         try:
@@ -39,23 +44,23 @@ async def fetch_sector_table(page):
                 '상세링크': sector_link
             })
             if (idx + 1) % 10 == 0:
-                print(f"    {idx + 1}개 row 파싱 완료")
+                logger.debug(f"    {idx + 1}개 row 파싱 완료")
         except Exception as e:
-            print(f"    row {idx} 파싱 오류: {e}")
+            logger.error(f"    row {idx} 파싱 오류: {e}")
             continue
-    print(f"  크롤링 완료, 총 {len(sector_data)}개")
+    logger.debug(f"  크롤링 완료, 총 {len(sector_data)}개")
     return sector_data
 
 async def fetch_sector_table_all():
-    print("브라우저 실행 및 업종 페이지 접속 중...")
+    logger.debug("브라우저 실행 및 업종 페이지 접속 중...")
     async with async_playwright() as p:
         browser = await p.chromium.launch(headless=True)
         page = await browser.new_page()
         await page.goto(NAVER_SECTOR_URL)
-        print("업종 페이지 접속 완료, 데이터 크롤링 중...")
+        logger.debug("업종 페이지 접속 완료, 데이터 크롤링 중...")
         sector_data = await fetch_sector_table(page)
         await browser.close()
-    print(f"전체 크롤링 완료, 총 {len(sector_data)}개")
+    logger.debug(f"전체 크롤링 완료, 총 {len(sector_data)}개")
     return sector_data
 
 def validate_sector_data(sector_data):
@@ -66,7 +71,7 @@ def validate_sector_data(sector_data):
     df['상승종목수'] = pd.to_numeric(df['상승종목수'].str.replace(',','').str.strip(), errors='coerce')
     df['보합종목수'] = pd.to_numeric(df['보합종목수'].str.replace(',','').str.strip(), errors='coerce')
     df['하락종목수'] = pd.to_numeric(df['하락종목수'].str.replace(',','').str.strip(), errors='coerce')
-    df = df.dropna(subset=['업종명', '전일대비']) 
+    df = df.dropna(subset=['업종명', '전일대비'])
     return df
 
 def validate_stock_data(stock_data):
@@ -80,7 +85,7 @@ def validate_stock_data(stock_data):
     df['전일거래량'] = pd.to_numeric(df['전일거래량'].str.replace(',','').str.strip(), errors='coerce')
     return df
 
-async def fetch_all_sector_stocks(sector_df): 
+async def fetch_all_sector_stocks(sector_df):
     async with async_playwright() as p:
         browser = await p.chromium.launch(headless=True)
         page = await browser.new_page()
@@ -93,7 +98,7 @@ async def fetch_all_sector_stocks(sector_df):
                 sector_code = row['상세링크'].split('no=')[-1]
             if sector_name == '기타':
                 continue  # 기타 업종은 제외
-            print(f"{sector_name} 종목 크롤링 중...")
+            logger.debug(f"{sector_name} 종목 크롤링 중...")
             await page.goto(sector_url)
             table1 = await page.locator('table.type_1 > tbody > tr').all()
             for r in table1:
@@ -186,11 +191,11 @@ class SectorInfoService:
                 )
                 self.db.execute(stmt)
                 self.db.commit()
-                print(f"tb_sector_info 테이블에 {len(sector_data_list)}건 upsert 완료")
+                logger.info(f"tb_sector_info 테이블에 {len(sector_data_list)}건 upsert 완료")
             else:
-                print("업데이트할 업종 데이터가 없습니다.")
+                logger.warning("업데이트할 업종 데이터가 없습니다.")
         except Exception as e:
-            print(f"DB upsert 오류: {e}")
+            logger.error(f"DB upsert 오류: {e}")
             self.db.rollback()
         finally:
             self.db.close()
@@ -205,7 +210,7 @@ class SectorInfoService:
             for _, row in stock_df.iterrows():
                 sector_code = row['업종코드']
                 ticker = row['티커']
-                
+
                 stock_id = stock_map.get(ticker)
                 sector_id = sector_map.get(sector_code)
                 if stock_id and sector_id:
@@ -237,11 +242,11 @@ class SectorInfoService:
                 )
                 db.execute(stmt)
                 db.commit()
-                print(f"tb_relation_stock_sector 테이블에 {len(relation_data)}건 upsert 완료")
+                logger.info(f"tb_relation_stock_sector 테이블에 {len(relation_data)}건 upsert 완료")
             else:
-                print("업데이트할 관계 데이터가 없습니다.")
+                logger.warning("업데이트할 관계 데이터가 없습니다.")
         except Exception as e:
-            print(f"DB upsert 오류: {e}")
+            logger.error(f"DB upsert 오류: {e}")
             db.rollback()
         finally:
             db.close()
@@ -262,14 +267,51 @@ class SectorInfoService:
                         'mod_date': datetime.now(timezone.utc)
                     })
             db.commit()
-            print(f"tb_sector_info 테이블에 {len(sector_description_df)}건 description 업데이트 완료")
+            logger.info(f"tb_sector_info 테이블에 {len(sector_description_df)}건 description 업데이트 완료")
         except Exception as e:
-            print(f"DB description update 오류: {e}")
+            logger.error(f"DB description update 오류: {e}")
             db.rollback()
         finally:
             db.close()
 
 async def main():
+    load_dotenv()
+    ENV = os.getenv('ENV', 'development')
+    # 로그 디렉토리 생성
+    log_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'logs')
+    os.makedirs(log_dir, exist_ok=True)
+
+    # 로그 파일명 설정 (날짜 포함)
+    today = datetime.now().strftime('%Y-%m-%d')
+    log_filename = f'crawl_naver_sector_info_{today}.log'
+    log_filepath = os.path.join(log_dir, log_filename)
+
+    # 로깅 설정 - 파일과 콘솔 모두에 출력
+    logger.setLevel(logging.WARNING)
+
+    # 기존 핸들러 제거 (중복 방지)
+    for handler in logger.handlers[:]:
+        logger.removeHandler(handler)
+
+    # 파일 핸들러 설정
+    file_handler = logging.FileHandler(log_filepath, encoding='utf-8')
+    file_handler.setLevel(logging.WARNING)
+
+    # 포맷터 설정
+    formatter = logging.Formatter(
+        '%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+        datefmt='%Y-%m-%d %H:%M:%S'
+    )
+    file_handler.setFormatter(formatter)
+    logger.addHandler(file_handler)
+
+    # 콘솔 핸들러는 production이 아닐 때만 추가
+    if ENV != 'production':
+        console_handler = logging.StreamHandler()
+        console_handler.setLevel(logging.WARNING)
+        console_handler.setFormatter(formatter)
+        logger.addHandler(console_handler)
+
     # 테마 크롤링
     sector_data = await fetch_sector_table_all()
     df = validate_sector_data(sector_data)
@@ -280,6 +322,6 @@ async def main():
     stock_df = await fetch_all_sector_stocks(df)
     stock_df = validate_stock_data(stock_df)
     sector_info_service.upsert_stock_sector_relation(stock_df)
-    
+
 if __name__ == "__main__":
     asyncio.run(main()) 

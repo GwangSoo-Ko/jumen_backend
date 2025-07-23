@@ -1,12 +1,18 @@
 import asyncio
+import logging
+import os
+from datetime import datetime, timezone
 from playwright.async_api import async_playwright
 import pandas as pd
 from app.db.database import SessionLocal
 from sqlalchemy.dialects.postgresql import insert
-from datetime import datetime, timezone
 from app.db.models.stock_info import StockInfo
 from app.db.models.theme_info import ThemeInfo
 from app.db.models.stock_theme_relation import StockThemeRelation
+from dotenv import load_dotenv
+
+# 로거 설정
+logger = logging.getLogger('app.service.batch')
 
 NAVER_THEME_URL = "https://finance.naver.com/sise/theme.naver"
 
@@ -22,7 +28,7 @@ async def get_last_page_num(page):
 
 async def fetch_theme_table(page):
     rows = await page.locator('table.type_1 > tbody > tr').all()
-    print(f"  row 개수: {len(rows)}")
+    logger.debug(f"  row 개수: {len(rows)}")
     theme_data = []
     for idx, row in enumerate(rows):
         try:
@@ -51,31 +57,31 @@ async def fetch_theme_table(page):
                 '상세링크': theme_link
             })
             if (idx + 1) % 10 == 0:
-                print(f"    {idx + 1}개 row 파싱 완료")
+                logger.debug(f"    {idx + 1}개 row 파싱 완료")
         except Exception as e:
-            print(f"    row {idx} 파싱 오류: {e}")
+            logger.error(f"    row {idx} 파싱 오류: {e}")
             continue
-    print(f"  크롤링 완료, 총 {len(theme_data)}개")
+    logger.debug(f"  크롤링 완료, 총 {len(theme_data)}개")
     return theme_data
 
 async def fetch_theme_table_all_pages():
-    print("브라우저 실행 및 첫 페이지 접속 중...")
+    logger.debug("브라우저 실행 및 첫 페이지 접속 중...")
     async with async_playwright() as p:
         browser = await p.chromium.launch(headless=True)
         page = await browser.new_page()
         await page.goto(NAVER_THEME_URL)
-        print("첫 페이지 접속 완료")
+        logger.debug("첫 페이지 접속 완료")
         last_page = await get_last_page_num(page)
-        print(f"총 {last_page}페이지 탐색 예정")
+        logger.debug(f"총 {last_page}페이지 탐색 예정")
         all_theme_data = []
         for page_num in range(1, last_page + 1):
             url = f"{NAVER_THEME_URL}?&page={page_num}"
             await page.goto(url)
-            print(f"{page_num}페이지 크롤링 중...")
+            logger.debug(f"{page_num}페이지 크롤링 중...")
             theme_data = await fetch_theme_table(page)
             all_theme_data.extend(theme_data)
         await browser.close()
-    print(f"전체 크롤링 완료, 총 {len(all_theme_data)}개")
+    logger.debug(f"전체 크롤링 완료, 총 {len(all_theme_data)}개")
     return all_theme_data
 
 def validate_theme_data(theme_data):
@@ -113,7 +119,7 @@ async def fetch_all_theme_stocks(theme_df):
             theme_code = None
             if row['상세링크'] and 'no=' in row['상세링크']:
                 theme_code = row['상세링크'].split('no=')[-1]
-            print(f"{theme_name} 종목 크롤링 중...")
+            logger.debug(f"{theme_name} 종목 크롤링 중...")
             await page.goto(theme_url)
             table1 = await page.locator('table.type_1 > tbody > tr').all()
             for r in table1:
@@ -217,11 +223,11 @@ class ThemeInfoService:
                 )
                 self.db.execute(stmt)
                 self.db.commit()
-                print(f"tb_theme_info 테이블에 {len(theme_data_list)}건 upsert 완료")
+                logger.info(f"tb_theme_info 테이블에 {len(theme_data_list)}건 upsert 완료")
             else:
-                print("업데이트할 테마 데이터가 없습니다.")
+                logger.warning("업데이트할 테마 데이터가 없습니다.")
         except Exception as e:
-            print(f"DB upsert 오류: {e}")
+            logger.error(f"DB upsert 오류: {e}")
             self.db.rollback()
         finally:
             self.db.close()
@@ -270,11 +276,11 @@ class ThemeInfoService:
                 )
                 db.execute(stmt)
                 db.commit()
-                print(f"tb_relation_stock_theme 테이블에 {len(relation_data)}건 upsert 완료")
+                logger.info(f"tb_relation_stock_theme 테이블에 {len(relation_data)}건 upsert 완료")
             else:
-                print("업데이트할 관계 데이터가 없습니다.")
+                logger.warning("업데이트할 관계 데이터가 없습니다.")
         except Exception as e:
-            print(f"DB upsert 오류: {e}")
+            logger.error(f"DB upsert 오류: {e}")
             db.rollback()
         finally:
             db.close()
@@ -295,14 +301,51 @@ class ThemeInfoService:
                         'mod_date': datetime.now(timezone.utc)
                     })
             db.commit()
-            print(f"tb_theme_info 테이블에 {len(theme_description_df)}건 description 업데이트 완료")
+            logger.info(f"tb_theme_info 테이블에 {len(theme_description_df)}건 description 업데이트 완료")
         except Exception as e:
-            print(f"DB description update 오류: {e}")
+            logger.error(f"DB description update 오류: {e}")
             db.rollback()
         finally:
             db.close()
 
 async def main():
+    load_dotenv()
+    ENV = os.getenv('ENV', 'development')
+    # 로그 디렉토리 생성
+    log_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'logs')
+    os.makedirs(log_dir, exist_ok=True)
+    
+    # 로그 파일명 설정 (날짜 포함)
+    today = datetime.now().strftime('%Y-%m-%d')
+    log_filename = f'crawl_naver_theme_info_{today}.log'
+    log_filepath = os.path.join(log_dir, log_filename)
+    
+    # 로깅 설정 - 파일과 콘솔 모두에 출력
+    logger.setLevel(logging.WARNING)
+    
+    # 기존 핸들러 제거 (중복 방지)
+    for handler in logger.handlers[:]:
+        logger.removeHandler(handler)
+    
+    # 파일 핸들러 설정
+    file_handler = logging.FileHandler(log_filepath, encoding='utf-8')
+    file_handler.setLevel(logging.WARNING)
+    
+    # 포맷터 설정
+    formatter = logging.Formatter(
+        '%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+        datefmt='%Y-%m-%d %H:%M:%S'
+    )
+    file_handler.setFormatter(formatter)
+    logger.addHandler(file_handler)
+    
+    # 콘솔 핸들러는 production이 아닐 때만 추가
+    if ENV != 'production':
+        console_handler = logging.StreamHandler()
+        console_handler.setLevel(logging.WARNING)
+        console_handler.setFormatter(formatter)
+        logger.addHandler(console_handler)
+
     # 테마 크롤링
     theme_data = await fetch_theme_table_all_pages()
     df = validate_theme_data(theme_data)

@@ -19,7 +19,7 @@ import secrets
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, ExpiredSignatureError
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('app.api')
 
 router = APIRouter()
 
