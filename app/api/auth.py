@@ -6,7 +6,7 @@ from app.db.database import SessionLocal
 from app.db.models.user import User
 from app.db.models.account import Account
 from app.db.models.refresh_token import RefreshToken
-from app.schemas.user import UserResponse, AccountResponse
+from app.schemas.user import UserResponse
 import logging
 from pydantic import BaseModel, EmailStr
 from passlib.context import CryptContext

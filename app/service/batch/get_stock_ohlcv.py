@@ -16,8 +16,8 @@ class StockOhlcvService:
     def __init__(self):
         self.db = SessionLocal()
 
-    def get_ticker_list(self):
-        stmt = select(StockInfo.ticker).where(StockInfo.market == '코스피')
+    def get_ticker_list(self, market_type: str):
+        stmt = select(StockInfo.ticker).where(StockInfo.market == market_type)
         return self.db.execute(stmt).scalars().all()
 
     def upsert_stock_ohlcv(self, ticker, df):
@@ -200,12 +200,13 @@ class StockOhlcvService:
 if __name__ == '__main__':
     start_time = time.time()
     stock_ohlcv_service = StockOhlcvService()
-    ticker_list = stock_ohlcv_service.get_ticker_list()
+    market_type = 'KOSPI'
+    ticker_list = stock_ohlcv_service.get_ticker_list(market_type)
     for ticker_sub in ticker_list:
         ticker_list = [ticker_sub]
         start_date = '2024-01-01'
         end_date = datetime.now().strftime('%Y-%m-%d')
-        df = stock_ohlcv_service.download_krx_data(ticker_list, start_date, end_date, chunk_size=50, label='코스피')
+        df = stock_ohlcv_service.download_krx_data(ticker_list, start_date, end_date, chunk_size=50, label=market_type)
         print(f"ticker: {ticker_sub} 데이터 다운로드 소요시간: {time.time() - start_time}초")
         start_time = time.time()
         for ticker, df in df.items():

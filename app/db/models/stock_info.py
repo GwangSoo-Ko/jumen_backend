@@ -1,4 +1,4 @@
-from sqlalchemy import Column, BigInteger, String, Date
+from sqlalchemy import Column, BigInteger, String, Numeric
 from app.db.models.timestamp_mixin import TimestampMixin
 from app.db.database import Base
 
@@ -9,9 +9,11 @@ class StockInfo(TimestampMixin, Base):
     ticker = Column(String, unique=True, nullable=False)
     name = Column(String, unique=True, nullable=False)
     market = Column(String)
-    sector = Column(String)
-    listed_date = Column(Date)
-    size = Column(String)
-    company_class = Column(String)
-    listed_count = Column(BigInteger)
-    warning_status = Column(String)
+    stock_count = Column(BigInteger)
+    market_cap = Column(BigInteger)
+    bps = Column(BigInteger)
+    per = Column(Numeric)
+    pbr = Column(Numeric)
+    eps = Column(BigInteger)
+    div = Column(Numeric)
+    dps = Column(BigInteger)

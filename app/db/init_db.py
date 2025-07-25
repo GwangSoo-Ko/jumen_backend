@@ -1,32 +1,6 @@
 import logging
-import os
-from dotenv import load_dotenv
-
-# .env 환경변수 로드 및 ENV 확인
-load_dotenv()
-ENV = os.getenv('ENV', 'development')
-
-# 로그 디렉토리 및 파일 설정
-log_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'logs')
-os.makedirs(log_dir, exist_ok=True)
-log_filepath = os.path.join(log_dir, 'init_db.log')
 
 logger = logging.getLogger('app.db')
-logger.setLevel(logging.INFO)
-for handler in logger.handlers[:]:
-    logger.removeHandler(handler)
-file_handler = logging.FileHandler(log_filepath, encoding='utf-8')
-file_handler.setLevel(logging.INFO)
-formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(filename)s:%(lineno)d - %(funcName)s - %(message)s')
-file_handler.setFormatter(formatter)
-logger.addHandler(file_handler)
-
-# 개발환경에서는 콘솔 핸들러도 추가
-if ENV != 'production':
-    console_handler = logging.StreamHandler()
-    console_handler.setLevel(logging.INFO)
-    console_handler.setFormatter(formatter)
-    logger.addHandler(console_handler)
 
 from app.db.database import engine, Base
 from app.db.models.kiwoom_api_info import KiwoomApiInfo

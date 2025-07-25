@@ -1,35 +1,22 @@
 import asyncio
 import logging
-import os
-from datetime import datetime, timezone
 from playwright.async_api import async_playwright
 import pandas as pd
 from app.db.database import SessionLocal
 from sqlalchemy.dialects.postgresql import insert
+from datetime import datetime, timezone
 from app.db.models.stock_info import StockInfo
-from app.db.models.theme_info import ThemeInfo
-from app.db.models.stock_theme_relation import StockThemeRelation
-from dotenv import load_dotenv
+from app.db.models.sector_info import SectorInfo
+from app.db.models.stock_sector_relation import StockSectorRelation
 
-# 로거 설정
 logger = logging.getLogger('app.service.batch')
 
-NAVER_THEME_URL = "https://finance.naver.com/sise/theme.naver"
+NAVER_SECTOR_URL = "https://finance.naver.com/sise/sise_group.naver?type=upjong"
 
-async def get_last_page_num(page):
-    # 페이지 하단의 페이징 링크에서 마지막 페이지 번호 추출
-    page_links = await page.locator('table.Nnavi a').all()
-    page_nums = []
-    for link in page_links:
-        text = await link.inner_text()
-        if text.isdigit():
-            page_nums.append(int(text))
-    return max(page_nums) if page_nums else 1
-
-async def fetch_theme_table(page):
+async def fetch_sector_table(page):
     rows = await page.locator('table.type_1 > tbody > tr').all()
     logger.debug(f"  row 개수: {len(rows)}")
-    theme_data = []
+    sector_data = []
     for idx, row in enumerate(rows):
         try:
             tds = await row.locator('td').all()
@@ -38,62 +25,51 @@ async def fetch_theme_table(page):
             a_count = await tds[0].locator('a').count()
             if a_count == 0:
                 continue  # 테마명이 없는 row
-            theme_name = await tds[0].locator('a').inner_text()
-            theme_link = await tds[0].locator('a').get_attribute('href')
+            sector_name = await tds[0].locator('a').inner_text()
+            sector_link = await tds[0].locator('a').get_attribute('href')
             change_rate = await tds[1].inner_text()
-            change_rate_3days = await tds[2].inner_text()
             up_ticker_count = await tds[3].inner_text()
             neutral_ticker_count = await tds[4].inner_text()
             down_ticker_count = await tds[5].inner_text()
-            if theme_link:
-                theme_link = f"https://finance.naver.com{theme_link}"
-            theme_data.append({
-                '테마명': theme_name.strip(),
+            if sector_link:
+                sector_link = f"https://finance.naver.com{sector_link}"
+            sector_data.append({
+                '업종명': sector_name.strip(),
                 '전일대비': change_rate.strip(),
-                '최근3일등락률(평균)': change_rate_3days.strip(),
                 '상승종목수': up_ticker_count.strip(),
                 '보합종목수': neutral_ticker_count.strip(),
                 '하락종목수': down_ticker_count.strip(),
-                '상세링크': theme_link
+                '상세링크': sector_link
             })
             if (idx + 1) % 10 == 0:
                 logger.debug(f"    {idx + 1}개 row 파싱 완료")
         except Exception as e:
             logger.error(f"    row {idx} 파싱 오류: {e}")
             continue
-    logger.debug(f"  크롤링 완료, 총 {len(theme_data)}개")
-    return theme_data
+    logger.debug(f"  크롤링 완료, 총 {len(sector_data)}개")
+    return sector_data
 
-async def fetch_theme_table_all_pages():
-    logger.debug("브라우저 실행 및 첫 페이지 접속 중...")
+async def fetch_sector_table_all():
+    logger.debug("브라우저 실행 및 업종 페이지 접속 중...")
     async with async_playwright() as p:
         browser = await p.chromium.launch(headless=True)
         page = await browser.new_page()
-        await page.goto(NAVER_THEME_URL)
-        logger.debug("첫 페이지 접속 완료")
-        last_page = await get_last_page_num(page)
-        logger.debug(f"총 {last_page}페이지 탐색 예정")
-        all_theme_data = []
-        for page_num in range(1, last_page + 1):
-            url = f"{NAVER_THEME_URL}?&page={page_num}"
-            await page.goto(url)
-            logger.debug(f"{page_num}페이지 크롤링 중...")
-            theme_data = await fetch_theme_table(page)
-            all_theme_data.extend(theme_data)
+        await page.goto(NAVER_SECTOR_URL)
+        logger.debug("업종 페이지 접속 완료, 데이터 크롤링 중...")
+        sector_data = await fetch_sector_table(page)
         await browser.close()
-    logger.debug(f"전체 크롤링 완료, 총 {len(all_theme_data)}개")
-    return all_theme_data
+    logger.debug(f"전체 크롤링 완료, 총 {len(sector_data)}개")
+    return sector_data
 
-def validate_theme_data(theme_data):
+def validate_sector_data(sector_data):
     """데이터 유효성 검증 및 결측치 처리"""
-    df = pd.DataFrame(theme_data)
+    df = pd.DataFrame(sector_data)
     # 등락률이 숫자가 아닌 경우 결측치 처리 (마이너스는 유지, 플러스만 제거)
     df['전일대비'] = pd.to_numeric(df['전일대비'].str.replace('%','').str.replace('+','').str.strip(), errors='coerce') / 100
-    df['최근3일등락률(평균)'] = pd.to_numeric(df['최근3일등락률(평균)'].str.replace('%','').str.replace('+','').str.strip(), errors='coerce') / 100
     df['상승종목수'] = pd.to_numeric(df['상승종목수'].str.replace(',','').str.strip(), errors='coerce')
     df['보합종목수'] = pd.to_numeric(df['보합종목수'].str.replace(',','').str.strip(), errors='coerce')
     df['하락종목수'] = pd.to_numeric(df['하락종목수'].str.replace(',','').str.strip(), errors='coerce')
-    df = df.dropna(subset=['테마명', '전일대비', '최근3일등락률(평균)'])
+    df = df.dropna(subset=['업종명', '전일대비'])
     return df
 
 def validate_stock_data(stock_data):
@@ -107,20 +83,21 @@ def validate_stock_data(stock_data):
     df['전일거래량'] = pd.to_numeric(df['전일거래량'].str.replace(',','').str.strip(), errors='coerce')
     return df
 
-async def fetch_all_theme_stocks(theme_df):
+async def fetch_all_sector_stocks(sector_df):
     async with async_playwright() as p:
         browser = await p.chromium.launch(headless=True)
         page = await browser.new_page()
-        all_theme_description = []
         all_stock_data = []
-        for idx, row in theme_df.iterrows():
-            theme_name = row['테마명']
-            theme_url = row['상세링크']
-            theme_code = None
+        for idx, row in sector_df.iterrows():
+            sector_name = row['업종명']
+            sector_url = row['상세링크']
+            sector_code = None
             if row['상세링크'] and 'no=' in row['상세링크']:
-                theme_code = row['상세링크'].split('no=')[-1]
-            logger.debug(f"{theme_name} 종목 크롤링 중...")
-            await page.goto(theme_url)
+                sector_code = row['상세링크'].split('no=')[-1]
+            if sector_name == '기타':
+                continue  # 기타 업종은 제외
+            logger.debug(f"{sector_name} 종목 크롤링 중...")
+            await page.goto(sector_url)
             table1 = await page.locator('table.type_1 > tbody > tr').all()
             for r in table1:
                 tds = await r.locator('td').all()
@@ -129,11 +106,6 @@ async def fetch_all_theme_stocks(theme_df):
                 a_count = await tds[0].locator('a').count()
                 if a_count == 0:
                     continue
-                theme_description = await tds[0].locator('div.info_layer_wrap').locator('p').inner_text()
-                all_theme_description.append({
-                    '테마코드': theme_code,
-                    '설명': theme_description
-                })
             table5 = await page.locator('table.type_5 > tbody > tr').all()
             for r in table5:
                 tds = await r.locator('td').all()
@@ -144,28 +116,26 @@ async def fetch_all_theme_stocks(theme_df):
                     continue
                 stock_name = await tds[0].locator('a').inner_text()
                 stock_link = await tds[0].locator('a').get_attribute('href')
-                description = await tds[1].locator('div.info_layer_wrap').locator('p').inner_text()
-                current_price = await tds[2].inner_text()
-                diff_price = await tds[3].evaluate("""
+                current_price = await tds[1].inner_text()
+                diff_price = await tds[2].evaluate("""
                     (node) => {
                         // <em> 태그를 모두 제거
                         node.querySelectorAll('em').forEach(em => em.remove());
                         return node.innerText;
                     }
                 """)
-                change_rate = await tds[4].inner_text()
-                volume = await tds[5].inner_text()
-                trading_value = await tds[6].inner_text()
-                volume_yesterday = await tds[7].inner_text()
+                change_rate = await tds[3].inner_text()
+                volume = await tds[6].inner_text()
+                trading_value = await tds[7].inner_text()
+                volume_yesterday = await tds[8].inner_text()
                 ticker = None
                 if stock_link and 'code=' in stock_link:
                     ticker = stock_link.split('code=')[-1]
                 all_stock_data.append({
-                    '테마코드': theme_code,
-                    '테마명': theme_name,
+                    '업종코드': sector_code,
+                    '업종명': sector_name,
                     '종목명': stock_name.strip(),
                     '티커': ticker,
-                    '설명': description,
                     '현재가': current_price,
                     '전일대비': diff_price,
                     '등락률': change_rate,
@@ -174,27 +144,24 @@ async def fetch_all_theme_stocks(theme_df):
                     '전일거래량': volume_yesterday
                 })
         await browser.close()
-    return pd.DataFrame(all_stock_data), pd.DataFrame(all_theme_description)
+    return pd.DataFrame(all_stock_data)
 
-class ThemeInfoService:
+class SectorInfoService:
     def __init__(self):
         self.db = SessionLocal()
 
-    def upsert_theme_info(self, df):
-        """크롤링된 테마 DataFrame을 tb_theme_info 테이블에 upsert"""
-        theme_data_list = []
+    def upsert_sector_info(self, df):
+        """크롤링된 업종 DataFrame을 tb_sector_info 테이블에 upsert"""
+        sector_data_list = []
         for _, row in df.iterrows():
-            # theme_code는 상세링크에서 추출 (예: ...no=579)
-            theme_code = None
+            # sector_code는 상세링크에서 추출 (예: ...no=579)
+            sector_code = None
             if row['상세링크'] and 'no=' in row['상세링크']:
-                theme_code = row['상세링크'].split('no=')[-1]
-            if theme_code == '284':
-                continue  # 스팩주 테마는 제외
-            theme_data_list.append({
-                'theme_code': theme_code,
-                'theme_name': row['테마명'],
+                sector_code = row['상세링크'].split('no=')[-1]
+            sector_data_list.append({
+                'sector_code': sector_code,
+                'sector_name': row['업종명'],
                 'change_rate': row['전일대비'],
-                'avg_change_rate_3days': row['최근3일등락률(평균)'],
                 'up_ticker_count': int(row['상승종목수']),
                 'neutral_ticker_count': int(row['보합종목수']),
                 'down_ticker_count': int(row['하락종목수']),
@@ -203,13 +170,12 @@ class ThemeInfoService:
                 'mod_date': datetime.now(timezone.utc)
             })
         try:
-            if theme_data_list:
-                from app.db.models.theme_info import ThemeInfo
-                stmt = insert(ThemeInfo).values(theme_data_list)
+            if sector_data_list:
+                from app.db.models.sector_info import SectorInfo
+                stmt = insert(SectorInfo).values(sector_data_list)
                 update_dict = {
-                    'theme_name': stmt.excluded.theme_name,
+                    'sector_name': stmt.excluded.sector_name,
                     'change_rate': stmt.excluded.change_rate,
-                    'avg_change_rate_3days': stmt.excluded.avg_change_rate_3days,
                     'up_ticker_count': stmt.excluded.up_ticker_count,
                     'neutral_ticker_count': stmt.excluded.neutral_ticker_count,
                     'down_ticker_count': stmt.excluded.down_ticker_count,
@@ -218,48 +184,47 @@ class ThemeInfoService:
                     'mod_date': stmt.excluded.mod_date
                 }
                 stmt = stmt.on_conflict_do_update(
-                    index_elements=['theme_code', 'theme_name', 'ref'],
+                    index_elements=['sector_code', 'sector_name', 'ref'],
                     set_=update_dict
                 )
                 self.db.execute(stmt)
                 self.db.commit()
-                logger.info(f"tb_theme_info 테이블에 {len(theme_data_list)}건 upsert 완료")
+                logger.info(f"tb_sector_info 테이블에 {len(sector_data_list)}건 upsert 완료")
             else:
-                logger.warning("업데이트할 테마 데이터가 없습니다.")
+                logger.warning("업데이트할 업종 데이터가 없습니다.")
         except Exception as e:
             logger.error(f"DB upsert 오류: {e}")
             self.db.rollback()
         finally:
             self.db.close()
 
-    def upsert_stock_theme_relation(self, stock_df):
+    def upsert_stock_sector_relation(self, stock_df):
         db = SessionLocal()
         try:
             # DB에서 필요한 id 매핑 정보 미리 조회
             stock_map = dict(db.query(StockInfo.ticker, StockInfo.id).all())
-            theme_map = dict(db.query(ThemeInfo.theme_code, ThemeInfo.id).filter(ThemeInfo.ref == '네이버').all())
+            sector_map = dict(db.query(SectorInfo.sector_code, SectorInfo.id).filter(SectorInfo.ref == '네이버').all())
             relation_data = []
             for _, row in stock_df.iterrows():
-                theme_code = row['테마코드']
+                sector_code = row['업종코드']
                 ticker = row['티커']
-                
+
                 stock_id = stock_map.get(ticker)
-                theme_id = theme_map.get(theme_code)
-                if stock_id and theme_id:
+                sector_id = sector_map.get(sector_code)
+                if stock_id and sector_id:
                     relation_data.append({
                         'stock_id': stock_id,
-                        'theme_id': theme_id,
+                        'sector_id': sector_id,
                         'current_price': row['현재가'],
                         'diff_price': row['전일대비'],
                         'change_rate': row['등락률'],
                         'volume': row['거래량'],
                         'trading_value': row['거래대금'],
                         'volume_yesterday': row['전일거래량'],
-                        'description': row['설명'],
                         'mod_date': datetime.now(timezone.utc)
                     })
             if relation_data:
-                stmt = insert(StockThemeRelation).values(relation_data)
+                stmt = insert(StockSectorRelation).values(relation_data)
                 update_dict = {
                     'current_price': stmt.excluded.current_price,
                     'diff_price': stmt.excluded.diff_price,
@@ -267,16 +232,15 @@ class ThemeInfoService:
                     'volume': stmt.excluded.volume,
                     'trading_value': stmt.excluded.trading_value,
                     'volume_yesterday': stmt.excluded.volume_yesterday,
-                    'description': stmt.excluded.description,
                     'mod_date': stmt.excluded.mod_date
                 }
                 stmt = stmt.on_conflict_do_update(
-                    index_elements=['stock_id', 'theme_id'],
+                    index_elements=['stock_id', 'sector_id'],
                     set_=update_dict
                 )
                 db.execute(stmt)
                 db.commit()
-                logger.info(f"tb_relation_stock_theme 테이블에 {len(relation_data)}건 upsert 완료")
+                logger.info(f"tb_relation_stock_sector 테이블에 {len(relation_data)}건 upsert 완료")
             else:
                 logger.warning("업데이트할 관계 데이터가 없습니다.")
         except Exception as e:
@@ -285,23 +249,23 @@ class ThemeInfoService:
         finally:
             db.close()
 
-    def upsert_theme_description(self, theme_description_df):
-        from app.db.models.theme_info import ThemeInfo
+    def upsert_sector_description(self, sector_description_df):
+        from app.db.models.sector_info import SectorInfo
         db = SessionLocal()
         try:
-            # 테마코드 → theme_id 매핑
-            theme_map = dict(db.query(ThemeInfo.theme_code, ThemeInfo.id).filter(ThemeInfo.ref == '네이버').all())
-            for _, row in theme_description_df.iterrows():
-                theme_code = row['테마코드']
+            # 업종코드 → sector_id 매핑
+            sector_map = dict(db.query(SectorInfo.sector_code, SectorInfo.id).filter(SectorInfo.ref == '네이버').all())
+            for _, row in sector_description_df.iterrows():
+                sector_code = row['업종코드']
                 description = row['설명']
-                theme_id = theme_map.get(theme_code)
-                if theme_id and description:
-                    db.query(ThemeInfo).filter(ThemeInfo.id == theme_id).update({
+                sector_id = sector_map.get(sector_code)
+                if sector_id and description:
+                    db.query(SectorInfo).filter(SectorInfo.id == sector_id).update({
                         'description': description,
                         'mod_date': datetime.now(timezone.utc)
                     })
             db.commit()
-            logger.info(f"tb_theme_info 테이블에 {len(theme_description_df)}건 description 업데이트 완료")
+            logger.info(f"tb_sector_info 테이블에 {len(sector_description_df)}건 description 업데이트 완료")
         except Exception as e:
             logger.error(f"DB description update 오류: {e}")
             db.rollback()
@@ -309,54 +273,16 @@ class ThemeInfoService:
             db.close()
 
 async def main():
-    load_dotenv()
-    ENV = os.getenv('ENV', 'development')
-    # 로그 디렉토리 생성
-    log_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'logs')
-    os.makedirs(log_dir, exist_ok=True)
-    
-    # 로그 파일명 설정 (날짜 포함)
-    today = datetime.now().strftime('%Y-%m-%d')
-    log_filename = f'crawl_naver_theme_info_{today}.log'
-    log_filepath = os.path.join(log_dir, log_filename)
-    
-    # 로깅 설정 - 파일과 콘솔 모두에 출력
-    logger.setLevel(logging.WARNING)
-    
-    # 기존 핸들러 제거 (중복 방지)
-    for handler in logger.handlers[:]:
-        logger.removeHandler(handler)
-    
-    # 파일 핸들러 설정
-    file_handler = logging.FileHandler(log_filepath, encoding='utf-8')
-    file_handler.setLevel(logging.WARNING)
-    
-    # 포맷터 설정
-    formatter = logging.Formatter(
-        '%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-        datefmt='%Y-%m-%d %H:%M:%S'
-    )
-    file_handler.setFormatter(formatter)
-    logger.addHandler(file_handler)
-    
-    # 콘솔 핸들러는 production이 아닐 때만 추가
-    if ENV != 'production':
-        console_handler = logging.StreamHandler()
-        console_handler.setLevel(logging.WARNING)
-        console_handler.setFormatter(formatter)
-        logger.addHandler(console_handler)
-
-    # 테마 크롤링
-    theme_data = await fetch_theme_table_all_pages()
-    df = validate_theme_data(theme_data)
+    # 섹터 크롤링
+    sector_data = await fetch_sector_table_all()
+    df = validate_sector_data(sector_data)
     # DB upsert
-    theme_info_service = ThemeInfoService()
-    theme_info_service.upsert_theme_info(df)
-    # 테마별 종목 크롤링
-    stock_df, theme_description_df = await fetch_all_theme_stocks(df)
+    sector_info_service = SectorInfoService()
+    sector_info_service.upsert_sector_info(df)
+    # 섹터별 종목 크롤링
+    stock_df = await fetch_all_sector_stocks(df)
     stock_df = validate_stock_data(stock_df)
-    theme_info_service.upsert_stock_theme_relation(stock_df)
-    theme_info_service.upsert_theme_description(theme_description_df)
-    
+    sector_info_service.upsert_stock_sector_relation(stock_df)
+
 if __name__ == "__main__":
     asyncio.run(main()) 

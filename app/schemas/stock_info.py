@@ -1,17 +1,19 @@
 from pydantic import BaseModel, Field
 from typing import Optional
-from datetime import date, datetime
+from datetime import datetime
 
 class StockInfoBase(BaseModel):
     ticker: str
     name: str
     market: Optional[str]
-    sector: Optional[str]
-    listed_date: Optional[date]
-    size: Optional[str]
-    company_class: Optional[str]
-    listed_count: Optional[int]
-    warning_status: Optional[str]
+    stock_count: Optional[int]
+    market_cap: Optional[int]
+    bps: Optional[int]
+    per: Optional[float]
+    pbr: Optional[float]
+    eps: Optional[int]
+    div: Optional[float]
+    dps: Optional[int]
 
 class StockInfoResponse(StockInfoBase):
     id: int
